@@ -1,0 +1,72 @@
+These are the instructions for adding sc_sim's MQTT topic converter to the MQTT_GW app
+## must be replaced with the MQTT topic offset
+
+1. Copy mqtt_topic_scsim.* to cfs-basecamp/usr/apps/mqtt_gw/fsw/src/
+
+
+2. Edit mqtt_topic_tbl.h and add:
+
+   #include "mqtt_topic_scsim.h"
+
+   MQTT_TOPIC_SCSIM_Class_t   ScSim; to MQTT_TOPIC_TBL_Class_t
+
+3. Edit mqtt_topic_tbl.c and add:
+
+   { MQTT_TOPIC_SCSIM_CfeToJson,   MQTT_TOPIC_SCSIM_JsonToCfe,   MQTT_TOPIC_SCSIM_SbMsgTest }, // MQTT_TOPIC_TBL_PAYLOAD_SCSIM
+
+   MQTT_TOPIC_SCSIM_Constructor(&MqttTopicTbl->ScSim, 
+                                CFE_SB_ValueToMsgId(TopicBaseMid+##));
+
+
+4. Add cfs-basecamp/cfe-eds-framework/basecamp_defs/cpu1_mqtt_topic.json
+
+       {
+          "name":    "scsim",
+          "payload": ##,
+          "sb-role": "pub"
+       },
+
+
+5. Verify/correct the MQTT topic number in sc_sim's app_cfg.h and cpu1_sc_sim_ini.json agree with ## used
+   in cpu1_mqtt_topic.json
+
+
+   MQTT_GW_TOPIC_##_TLM_TOPICID
+
+
+6. Add sensor packet definition to MQTT_GW.XML
+
+      <ContainerDataType name="ScSimTlm_Payload" shortDescription="TableSat sensor data">
+        <EntryList>
+          <Entry name="DeltaTime" type="BASE_TYPES/uint32"  />
+          <Entry name="RateX"     type="BASE_TYPES/float"  />
+          <Entry name="RateY"     type="BASE_TYPES/float"  />
+          <Entry name="RateZ"     type="BASE_TYPES/float"  />
+          <Entry name="LuxA"      type="BASE_TYPES/uint32"  />
+          <Entry name="LuxB"      type="BASE_TYPES/uint32"  />
+        </EntryList>
+      </ContainerDataType>
+      
+      <ContainerDataType name="TblSatSensorTlm" baseType="CFE_HDR/TelemetryHeader">
+        <EntryList>
+          <Entry type="TblSatSensorTlm_Payload" name="Payload" />
+        </EntryList>
+      </ContainerDataType>
+
+          <Interface name="TBLSAT_SENSOR_TLM" shortDescription="Software bus telemetry interface" type="CFE_SB/Telemetry">
+            <GenericTypeMapSet>
+              <GenericTypeMap name="TelemetryDataType" type="TblSatSensorTlm" />
+            </GenericTypeMapSet>
+          </Interface>
+
+      # Note the topic ID is ##+1 because it is not an index
+      <Variable type="BASE_TYPES/uint16" readOnly="true" name="TblSatSensorTlmTopicId" initialValue="${CFE_MISSION/MQTT_GW_TOPIC_##+1_TLM_TOPICID}" />
+
+      <ParameterMap interface="TBLSAT_SENSOR_TLM"   parameter="TopicId" variableRef="TblSatSensorTlmTopicId" />
+
+7. In cfs-basecamp/cfe-eds-framework/basecamp_defs/cpu1_mqtt_topic.json to use mosquitto
+
+      "MQTT_BROKER_ADDRESS":  "localhost",
+
+
+      "MQTT_BROKER_ADDRESS":  "localhost",

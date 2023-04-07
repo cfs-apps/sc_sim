@@ -1,0 +1,363 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+    Copyright 2023 bitValence, Inc.
+    All Rights Reserved.
+
+    This program is free software; you can modify and/or redistribute it
+    under the terms of the GNU Affero General Public License
+    as published by the Free Software Foundation; version 3 with
+    attribution addendums as found in the LICENSE.txt.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+      
+    Purpose: 
+      Define interface for the Payload Manager (PL_MGR) application 
+
+    Notes:
+      1. This document adheres to the Electronic Data Sheet (EDS) XML schema 
+         as prescribed in CCSDS book 876.0. 
+      
+-->
+<PackageFile xmlns="http://www.ccsds.org/schema/sois/seds">
+  <Package name="SC_SIM" shortDescription="Spacecraft ops interface simulator">
+    <DataTypeSet>
+
+      <!--***********************************-->
+      <!--**** DataTypeSet:  Entry Types ****-->
+      <!--***********************************-->
+ 
+      <EnumeratedDataType name="TblId" shortDescription="Identifies different app tables" >
+        <IntegerDataEncoding sizeInBits="8" encoding="unsigned" />
+        <EnumerationList>
+          <Enumeration label="SIM_PARAMETERS" value="0" shortDescription="Histogram bin definitions" />
+        </EnumerationList>
+      </EnumeratedDataType>
+
+      <EnumeratedDataType name="Scenario" shortDescription="Define simulation scenario IDs. See sc_sim.c" >
+        <IntegerDataEncoding sizeInBits="16" encoding="unsigned" />
+        <EnumerationList>
+          <Enumeration label="GND_CONTACT_1" value="1" shortDescription="" />
+          <Enumeration label="GND_CONTACT_2" value="2" shortDescription="" />
+        </EnumerationList>
+      </EnumeratedDataType>
+
+      <EnumeratedDataType name="Phase" shortDescription="Define simulation time phases" >
+        <IntegerDataEncoding sizeInBits="8" encoding="unsigned" />
+        <EnumerationList>
+          <Enumeration label="UNDEF"      value="0" shortDescription="Undefined state" />
+          <Enumeration label="IDLE"       value="1" shortDescription="No sim events/commands being processed" />
+          <Enumeration label="INIT"       value="2" shortDescription="Initializing the simulation" />
+          <Enumeration label="TIME_LAPSE" value="3" shortDescription="Process blocks of time greater than one second" />
+          <Enumeration label="REALTIME"   value="4" shortDescription="Processing events aligned with actually time" />
+        </EnumerationList>
+      </EnumeratedDataType>
+
+      <EnumeratedDataType name="Subsystem" shortDescription="Define simulated susbystem identifiers" >
+        <IntegerDataEncoding sizeInBits="8" encoding="unsigned" />
+        <EnumerationList>
+          <Enumeration label="UNDEF" value="0" shortDescription="Undefined subsystem" />
+          <Enumeration label="SIM"   value="1" shortDescription="No sim events/commands being processed" />
+          <Enumeration label="ADCS"  value="2" shortDescription="Initializing the simulation" />
+          <Enumeration label="CDH"   value="3" shortDescription="Process blocks of time greater than one second" />
+          <Enumeration label="COMM"  value="4" shortDescription="Processing events aligned with actually time" />
+          <Enumeration label="FSW"   value="5" shortDescription="Processing events aligned with actually time" />
+          <Enumeration label="INSTR" value="6" shortDescription="Processing events aligned with actually time" />
+          <Enumeration label="POWER" value="7" shortDescription="Processing events aligned with actually time" />
+          <Enumeration label="THERM" value="8" shortDescription="Processing events aligned with actually time" />
+          <Enumeration label="COUNT" value="9" shortDescription="Processing events aligned with actually time" />
+        </EnumerationList>
+      </EnumeratedDataType>
+
+      <EnumeratedDataType name="AdcsMode" shortDescription="" >
+        <IntegerDataEncoding sizeInBits="8" encoding="unsigned" />
+        <EnumerationList>
+          <Enumeration label="UNDEF"     value="0" shortDescription="" />
+          <Enumeration label="SAFEHOLD"  value="1" shortDescription="" />
+          <Enumeration label="SUN_POINT" value="2" shortDescription="" />
+          <Enumeration label="INERTIAL"  value="3" shortDescription="" />
+          <Enumeration label="SLEW"      value="4" shortDescription="" />
+        </EnumerationList>
+      </EnumeratedDataType>
+
+      <EnumeratedDataType name="EventCmd" shortDescription="" >
+        <IntegerDataEncoding sizeInBits="8" encoding="unsigned" />
+        <EnumerationList>
+          <Enumeration label="UNDEF"     value="0" shortDescription="Undefined state" />
+          <Enumeration label="IDLE"      value="1" shortDescription="Idle event" />
+          <Enumeration label="INIT"      value="2" shortDescription="Initializing a simulation" />
+          <Enumeration label="START_SIM" value="3" shortDescription="Start a simulation" />
+          <Enumeration label="STOP_SIM"  value="4" shortDescription="Stop a simulation" />
+        </EnumerationList>
+      </EnumeratedDataType>
+
+      <ContainerDataType name="EventCmdTlm" shortDescription="Telemetry sent for each event command">
+        <EntryList>
+          <Entry name="Time"  type="BASE_TYPES/uint32"      />
+          <Entry name="Id"    type="BASE_TYPES/uint16"      />
+        </EntryList>
+      </ContainerDataType>
+
+      <!--***************************************-->
+      <!--**** DataTypeSet: Command Payloads ****-->
+      <!--***************************************-->
+
+      <ContainerDataType name="LoadTbl_Payload" shortDescription="Load an app's JSON table">
+        <EntryList>
+          <Entry name="Id"       type="TblId"                   shortDescription="Table identifier" />
+          <Entry name="Type"     type="APP_C_FW/TblLoadOptions" shortDescription="Replace entire table or perform sparse entry updates" />
+          <Entry name="Filename" type="BASE_TYPES/PathName"     shortDescription="Full path and file name of table to be loaded" />
+       </EntryList>
+      </ContainerDataType>
+      
+      <ContainerDataType name="DumpTbl_Payload" shortDescription="Dump an app's JSON table">
+        <EntryList>
+          <Entry name="Id"       type="TblId"               shortDescription="Table identifier" />
+          <Entry name="Unused"   type="BASE_TYPES/uint8"    shortDescription="Unused" />
+          <Entry name="Filename" type="BASE_TYPES/PathName" shortDescription="Full path and file name of table to be dumped" />
+       </EntryList>
+      </ContainerDataType>
+
+      <ContainerDataType name="StartSim_Payload" shortDescription="Start a predefined simulation scenario">
+        <EntryList>
+          <Entry name="ScenarioId"    type="Scenario"   shortDescription="See sc_sim.c for scenario definitions" />
+       </EntryList>
+      </ContainerDataType>
+
+      <!--*****************************************-->
+      <!--**** DataTypeSet: Telemetry Payloads ****-->
+      <!--*****************************************-->
+    
+      <ContainerDataType name="HkTlm_Payload" shortDescription="App's state and status summary, 'housekeeping data'">
+        <EntryList>
+          <Entry name="ValidCmdCnt"    type="BASE_TYPES/uint16"     />
+          <Entry name="InvalidCmdCnt"  type="BASE_TYPES/uint16"     />
+          <Entry name="LastTblAction"  type="APP_C_FW/TblActions"   />
+          <Entry name="SimTblLoaded"   type="APP_C_FW/BooleanUint8" />
+          <Entry name="SimActive"      type="APP_C_FW/BooleanUint8" />
+          <Entry name="SimPhase"       type="BASE_TYPES/uint8"      />
+          <Entry name="SimTime"        type="BASE_TYPES/uint32"     />
+        </EntryList>
+      </ContainerDataType>
+
+      <!-- 
+         The simulation object telemetry must be separate from the
+         HK packet that provides simulation state information. The 
+         simulation status is sent and displayed even when a simulated
+         ground contact is not active. The subsystem sim model data is
+         only sent when a ground contact is active.
+      -->
+
+      <ContainerDataType name="MgmtTlm_Payload" shortDescription="App's state and status summary, 'housekeeping data'">
+        <EntryList>
+          <Entry name="SimTime"   type="BASE_TYPES/uint32"     />
+          <Entry name="SimActive" type="APP_C_FW/BooleanUint8" />
+          <Entry name="SimPhase"  type="BASE_TYPES/uint8"      />
+   
+         <!-- Contact info is in both the management tlm and model telemetry -->
+  
+          <Entry name="ContactTimePending"    type="BASE_TYPES/uint16" />
+          <Entry name="ContactLength"         type="BASE_TYPES/uint16" />
+          <Entry name="ContactTimeConsumed"   type="BASE_TYPES/uint16" />
+          <Entry name="ContactTimeRemaining"  type="BASE_TYPES/uint16" />
+
+          <Entry name="LastEventSubSysId" type="Subsystem" />
+          <Entry name="LastEventCmdId"    type="EventCmd"  />
+          <Entry name="NextEventSubSysId" type="Subsystem" />
+          <Entry name="NextEventCmdId"    type="EventCmd"  />
+
+          <Entry name="AdcsLastEventCmd"  type="EventCmdTlm" />
+          <Entry name="CdhLastEventCmd"   type="EventCmdTlm" />
+          <Entry name="CommLastEventCmd"  type="EventCmdTlm" />
+          <Entry name="PowerLastEventCmd" type="EventCmdTlm" />
+          <Entry name="ThermLastEventCmd" type="EventCmdTlm" />
+
+        </EntryList>
+      </ContainerDataType>
+
+      <ContainerDataType name="ModelTlm_Payload" shortDescription="App's state and status summary, 'housekeeping data'">
+        <EntryList>
+          <!-- ADCS -->
+          <Entry name="Eclipse"  type="APP_C_FW/BooleanUint8" />
+          <Entry name="AdcsMode" type="AdcsMode" />
+          <!-- C&DH -->
+          <Entry name="SbcRstCnt"  type="BASE_TYPES/uint16" />
+          <Entry name="HwCmdCnt"   type="BASE_TYPES/uint16" />
+          <Entry name="LastHwCmd"  type="BASE_TYPES/uint16" />
+          <!-- Comm -->
+          <Entry name="InContact"            type="APP_C_FW/BooleanUint16" />
+          <Entry name="ContactTimePending"   type="BASE_TYPES/uint16" />
+          <Entry name="ContactTimeConsumed"  type="BASE_TYPES/uint16" />
+          <Entry name="ContactTimeRemaining" type="BASE_TYPES/uint16" />
+          <Entry name="ContactLink"          type="BASE_TYPES/uint8"  />
+          <Entry name="ContactTdrsId"        type="BASE_TYPES/uint8"  />
+          <Entry name="ContactDataRate"      type="BASE_TYPES/uint16" />
+          <!-- FSW -->
+          <Entry name="RecPctUsed"     type="BASE_TYPES/float"       />
+          <Entry name="RecFileCnt"     type="BASE_TYPES/uint16"      />
+          <Entry name="RecPlaybackEna" type="APP_C_FW/BooleanUint16" />
+          <!-- Instrument -->
+          <Entry name="InstrPwrEna"     type="APP_C_FW/BooleanUint8" />
+          <Entry name="InstrSciEna"     type="APP_C_FW/BooleanUint8" />
+          <Entry name="InstrFileCnt"    type="BASE_TYPES/uint16"     />
+          <Entry name="InstrFileCycCnt" type="BASE_TYPES/uint16"     />
+          <!-- Power -->
+          <Entry name="BattSoc"    type="BASE_TYPES/float" />
+          <Entry name="SaCurrent"  type="BASE_TYPES/float" />
+          <!-- Thermal -->
+          <Entry name="Heater1Ena" type="APP_C_FW/BooleanUint8" />
+          <Entry name="Heater2Ena" type="APP_C_FW/BooleanUint8" />
+        </EntryList>
+      </ContainerDataType>
+   
+      <!--**************************************-->
+      <!--**** DataTypeSet: Command Packets ****-->
+      <!--**************************************-->
+
+
+      <ContainerDataType name="CommandBase" baseType="CFE_HDR/CommandHeader">
+      </ContainerDataType>
+
+      <ContainerDataType name="Noop" baseType="CommandBase" shortDescription="Generate an info event message with app version">
+        <ConstraintSet>
+          <ValueConstraint entry="Sec.FunctionCode" value="${APP_C_FW/NOOP_CC}" />
+        </ConstraintSet>
+      </ContainerDataType>
+
+      <ContainerDataType name="Reset" baseType="CommandBase" shortDescription="Reset app to a known state">
+        <ConstraintSet>
+          <ValueConstraint entry="Sec.FunctionCode" value="${APP_C_FW/RESET_CC}" />
+        </ConstraintSet>
+      </ContainerDataType>
+
+      <ContainerDataType name="LoadTbl" baseType="CommandBase">
+        <ConstraintSet>
+          <ValueConstraint entry="Sec.FunctionCode" value="${APP_C_FW/LOAD_TBL_CC}" />
+        </ConstraintSet>
+        <EntryList>
+          <Entry type="LoadTbl_Payload" name="Payload" />
+        </EntryList>
+      </ContainerDataType>
+
+      <ContainerDataType name="DumpTbl" baseType="CommandBase">
+        <ConstraintSet>
+          <ValueConstraint entry="Sec.FunctionCode" value="${APP_C_FW/DUMP_TBL_CC}" />
+        </ConstraintSet>
+        <EntryList>
+          <Entry type="DumpTbl_Payload" name="Payload" />
+        </EntryList>
+      </ContainerDataType>
+
+      <ContainerDataType name="StartSim" baseType="CommandBase" shortDescription="Start a predefined simulation scenario">
+        <ConstraintSet>
+          <ValueConstraint entry="Sec.FunctionCode" value="${APP_C_FW/APP_BASE_CC} + 0" />
+        </ConstraintSet>
+        <EntryList>
+          <Entry type="StartSim_Payload" name="Payload" />
+        </EntryList>
+      </ContainerDataType>
+      
+      <ContainerDataType name="StopSim" baseType="CommandBase" shortDescription="Stop a currently active simulation">
+        <ConstraintSet>
+          <ValueConstraint entry="Sec.FunctionCode" value="${APP_C_FW/APP_BASE_CC} + 1" />
+        </ConstraintSet>
+      </ContainerDataType>
+
+      <ContainerDataType name="StartPlayback" baseType="CommandBase" shortDescription="Start event message playback">
+        <ConstraintSet>
+          <ValueConstraint entry="Sec.FunctionCode" value="${APP_C_FW/APP_BASE_CC} + 2" />
+        </ConstraintSet>
+      </ContainerDataType>
+
+      <ContainerDataType name="StopPlayback" baseType="CommandBase" shortDescription="Stop event message playback">
+        <ConstraintSet>
+          <ValueConstraint entry="Sec.FunctionCode" value="${APP_C_FW/APP_BASE_CC} + 3" />
+        </ConstraintSet>
+      </ContainerDataType>
+
+      <!--****************************************-->
+      <!--**** DataTypeSet: Telemetry Packets ****-->
+      <!--****************************************-->
+
+      <ContainerDataType name="HkTlm" baseType="CFE_HDR/TelemetryHeader">
+        <EntryList>
+          <Entry type="HkTlm_Payload" name="Payload" />
+        </EntryList>
+      </ContainerDataType>
+     
+      <ContainerDataType name="MgmtTlm" baseType="CFE_HDR/TelemetryHeader">
+        <EntryList>
+          <Entry type="MgmtTlm_Payload" name="Payload" />
+        </EntryList>
+      </ContainerDataType>
+
+      <ContainerDataType name="ModelTlm" baseType="CFE_HDR/TelemetryHeader">
+        <EntryList>
+          <Entry type="ModelTlm_Payload" name="Payload" />
+        </EntryList>
+      </ContainerDataType>
+
+    </DataTypeSet>
+    
+    <ComponentSet>
+      <Component name="Application">
+
+        <!--***********************************-->
+        <!--**** Component Set: Interfaces ****-->
+        <!--***********************************-->
+      
+        <RequiredInterfaceSet>
+        
+          <Interface name="CMD" shortDescription="Software bus telecommand interface" type="CFE_SB/Telecommand">
+            <GenericTypeMapSet>
+              <GenericTypeMap name="TelecommandDataType" type="CommandBase" />
+            </GenericTypeMapSet>
+          </Interface>
+          
+          <Interface name="HK_TLM" shortDescription="Software bus status telemetry interface" type="CFE_SB/Telemetry">
+            <GenericTypeMapSet>
+              <GenericTypeMap name="TelemetryDataType" type="HkTlm" />
+            </GenericTypeMapSet>
+          </Interface>
+
+          <Interface name="MGMT_TLM" shortDescription="Software bus status telemetry interface" type="CFE_SB/Telemetry">
+            <GenericTypeMapSet>
+              <GenericTypeMap name="TelemetryDataType" type="MgmtTlm" />
+            </GenericTypeMapSet>
+          </Interface>
+
+          <Interface name="MODEL_TLM" shortDescription="Software bus status telemetry interface" type="CFE_SB/Telemetry">
+            <GenericTypeMapSet>
+              <GenericTypeMap name="TelemetryDataType" type="ModelTlm" />
+            </GenericTypeMapSet>
+          </Interface>
+
+        </RequiredInterfaceSet>
+
+        <!--***************************************-->
+        <!--**** Component Set: Implementation ****-->
+        <!--***************************************-->
+
+        <Implementation>
+          <VariableSet>
+            <Variable type="BASE_TYPES/uint16" readOnly="true" name="CmdTopicId"      initialValue="${CFE_MISSION/SC_SIM_CMD_TOPICID}" />
+            <Variable type="BASE_TYPES/uint16" readOnly="true" name="HkTlmTopicId"    initialValue="${CFE_MISSION/SC_SIM_HK_TLM_TOPICID}" />
+            <Variable type="BASE_TYPES/uint16" readOnly="true" name="MgmtTlmTopicId"  initialValue="${CFE_MISSION/SC_SIM_MGMT_TLM_TOPICID}" />
+            <Variable type="BASE_TYPES/uint16" readOnly="true" name="ModelTlmTopicId" initialValue="${CFE_MISSION/SC_SIM_MODEL_TLM_TOPICID}" />
+          </VariableSet>
+          <!-- Assign fixed numbers to the "TopicId" parameter of each interface -->
+          <ParameterMapSet>          
+            <ParameterMap interface="CMD"       parameter="TopicId" variableRef="CmdTopicId" />
+            <ParameterMap interface="HK_TLM"    parameter="TopicId" variableRef="HkTlmTopicId" />
+            <ParameterMap interface="MGMT_TLM"  parameter="TopicId" variableRef="MgmtTlmTopicId" />
+            <ParameterMap interface="MODEL_TLM" parameter="TopicId" variableRef="ModelTlmTopicId" />
+          </ParameterMapSet>
+        </Implementation>
+      </Component>
+    </ComponentSet>
+    
+  </Package>
+</PackageFile>
