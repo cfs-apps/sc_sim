@@ -2,33 +2,132 @@
 <html>
    <head>
       <meta charset="utf-8">
-      <title>High Voltages - MQTT</title>
+      <title>cFS Basecamp - SC_SIM MQTT</title>
       <link rel="stylesheet" href="style.css">
       <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.2/mqttws31.min.js" type="text/javascript"></script>
       <script src="mqtt_if.js" type="text/javascript"></script>
    </head>
    <body>
-      <div class="wrapper">
-         <h1 id="Main_heading"> <b>cfS Basecamp Spacecraft Ops Sim</b></h1><br><br>
-         <form id="connection-information-form">
-            <b>Hostname or IP Address and Port Number:</b> 
-            <input id="host" type="text" name="host" value="broker.emqx.io">
-            
-            <input id="port" type="text" name="port" value="1883"><br>
-            <b>Username and Password:</b>
-            <input id="username" type="text" name="Username" placeholder="Username"><br>
-           
-            <input id="password" type="password" name="password" placeholder="password"><br>
-            <b>Subscription topic:</b>
-            <input id="topic_s" type="text" name="topic_s" value="basecamp/demo/discrete"><br><br>
-            <input type="button" onclick="startConnect()"  value="Connect">
-            <input type="button"  onclick="startDisconnect()" value="Disconnect"> <br>
-            <br><b>Publish Topic and Message:</b>
-            <input id="topic_p" type="text" name="topic_p" placeholder="Publish topic">
-            
-            <input id="Message" type="text" name="message"  placehilder="Message">
-            <input type="button" onclick="publishMessage()" value="Publish">
-         </form>
+      <div class="telemetry">
+         <h1 id="Main_heading"> <b>cFS Basecamp Spacecraft Ops Sim</b></h1>
+         <table id="simulator">
+            <tr>
+               <th><input type="th_button" onclick="startConnect()"       value="Connect"></th>
+               <th><input type="th_button" onclick="sendScSimCommand(1)"  value="Start Sim 1"></th>
+               <th><input type="th_button" onclick="sendScSimCommand(2)"  value="Start Sim 2"></th>
+               <th><input type="th_button" onclick="sendScSimCommand(3)"  value="Stop Sim"></th>
+               <th><input type="th_button" onclick="sendScSimCommand(4)"  value="Start Playback"></th>
+               <th><input type="th_button" onclick="sendScSimCommand(5)"  value="Stop Playback"></th>
+            </tr>
+            <tr>
+               <td><b>Sim Active</b></td>
+               <td><input id="sim_active" type="telemetry" name="sim_active"  placeholder="?"></td> 
+               <td><b>Sim Time</b></td>
+               <td><input id="sim_time" type="telemetry" name="sim_time"  placeholder="?"></td> 
+               <td><b>Time Before Contact</b></td>
+               <td><input id="time_before_contact" type="telemetry" name="time_before_contact"  placeholder="?"></td> 
+            </tr>
+            <tr>
+               <td><b>Contact Length (sec)</b></td>
+               <td><input id="contact_length" type="telemetry" name="contact_length"  placeholder="?"></td> 
+               <td><b>Contact Time Consumed</b></td>
+               <td><input id="contact_consumed" type="telemetry" name="contact_consumed"  placeholder="?"></td> 
+               <td><b>Contact Time Remaining</b></td>
+               <td><input id="contact_remaining" type="telemetry" name="contact_remaining"  placeholder="?"></td> 
+            </tr>
+         </table>
+         <table id="subsystem">
+            <tr>
+               <th>Subsystem</th>
+               <th>Realtime Telemetry</th>
+               <th>Value</th>
+               <th>Realtime Telemetry</th>
+               <th>Value</th>
+            </tr>
+            <tr>
+               <td><b>Attitude Det and Control</b></td>
+               <td>Mode</td> 
+               <td><input id="adcs_mode" type="telemetry" name="adcs_mode"  placeholder="?"></td> 
+               <td>Eclipse</td>
+               <td><input id="adcs_eclipse" type="telemetry" name="adcs_eclipse"  placeholder="?"></td> 
+            </tr>
+            <tr>
+               <td><b>Power</b></td>
+               <td>Battery State of Charge</td> 
+               <td><input id="power_batt_soc" type="telemetry" name="power_batt_soc"  placeholder="?"></td> 
+               <td>Solar Array Current</td>
+               <td><input id="power_sa_curr" type="telemetry" name="power_sa_curr"  placeholder="?"></td> 
+            </tr>
+            <tr>
+               <td><b>Communications</b></td>
+               <td>TDRS</td>
+               <td><input id="comm_tdrs" type="telemetry" name="comm_tdrs"  placeholder="?"></td> 
+               <td>Data Rate (kbps)</td>
+               <td><input id="comm_data_rate" type="telemetry" name="comm_data_rate"  placeholder="?"></td> 
+            <tr>
+               <td><b>Flight Software</b></td>
+               <td>Recorder Playback</td>
+               <td><input id="fsw_rec_plbk" type="telemetry" name="fsw_rec_plbk"  placeholder="?"></td> 
+               <td>Recorder File Count</td>
+               <td><input id="fsw_rec_file_cnt" type="telemetry" name="fsw_rec_file_cnt"  placeholder="?"></td> 
+            </tr>
+            <tr>
+               <td><b>Command and Data Handling</b></td>
+               <td>Processor Resets</td> 
+               <td><input id="cdh_sbc_resets" type="telemetry" name="cdh_sbc_resets"  placeholder="?"></td> 
+               <td>Hardware Cmds</td>
+               <td><input id="cdh_hw_cmds" type="telemetry" name="cdh_hw_cmds"  placeholder="?"></td> 
+            <tr>
+               <td><b>Instrument</b></td>
+               <td>Power</td> 
+               <td><input id="instr_power" type="telemetry" name="instr_power"  placeholder="?"></td> 
+               <td>Science</td>
+               <td><input id="instr_science" type="telemetry" name="instr_science"  placeholder="?"></td> 
+            </tr>
+            <tr>
+               <td><b>Thermal</b></td>
+               <td>Heater 1 On</td>
+               <td><input id="therm_htr_1" type="telemetry" name="therm_htr_1"  placeholder="?"></td> 
+               <td>Heater 2 On</td>
+               <td><input id="therm_htr_2" type="telemetry" name="therm_htr_2"  placeholder="?"></td> 
+            <tr>
+         </table>
+         <h3>Playback Event Messages</h3>
+         <div id="playback_event_messages"></div>
+         <h3>Realtime Event Messages</h3>
+         <div id="event_messages"></div>
+      </div>
+      <br>
+      <div class="admin">
+         <h2>Connection Admin</h2>
+         <table id="admin">
+           <tr>
+             <td><input type="button" onclick="startConnect()"      value="Connect"></td>
+             <td><input type="button" onclick="startDisconnect()"   value="Disconnect"></td>
+             <td><input type="button" onclick="publishMessage()"    value="Publish"></td>
+             <td><input type="button" onclick="clearActivityLog()" value="Clear Log"></td>
+           </tr>
+           <tr>
+             <td><b>Host/IP Address</b></td>
+             <td><input id="host" type="text" name="host" value="broker.hivemq.com"></td>
+             <td><b>Port</b></td>
+             <td><input id="port" type="text" name="port" value="8000"></td>
+           </tr>
+           <tr>
+             <td><b>Subscribe Topic</b></td>
+             <td><input id="topic_s" type="text" name="topic_s" value="basecamp"></td>
+             <td></td>
+             <td></td>
+           </tr>
+           <tr>
+             <td><b>Publish Topic</b></td>
+             <td><input id="topic_p" type="text" name="topic_p" placeholder="Publish topic"></td>
+             <td><b>Publish Message</b></td>
+             <td><input id="Message" type="text" name="message"  placeholder="Message"></td>
+           </tr>
+         </table>
+         <br>
+         <h3>Activity Log</h3>
          <div id="messages"></div>
       </div>
    </body>

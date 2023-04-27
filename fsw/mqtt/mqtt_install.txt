@@ -1,0 +1,9 @@
+Follow the instructions in mqtt_gw/fsw/topic_plugins/mqtt_topic_plugin_guide.txt with 
+the following qualifications:
+
+1. Use sc_sim for 'app_name'. Follow the nanimg case conventions in the instructions
+2. Add three topics: cmd, mgmt and model
+3. In cpu1_mqtt_gw_topics.json define
+   - "basecamp/sc_sim/cmd"   as "pub"
+   - "basecamp/sc_sim/mgmt"  as "sub"
+   - "basecamp/sc_sim/model" as "sub"

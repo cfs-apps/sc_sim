@@ -29,7 +29,6 @@
 ** Includes
 */
 
-#include "app_cfg.h"
 #include "sc_sim.h"
 #include "sc_sim_tbl.h"
 

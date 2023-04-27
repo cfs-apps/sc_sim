@@ -42,8 +42,9 @@
 #include "cfe_evs_eds_typedefs.h"
 #include "cfe_time_eds_cc.h"
 #include "cfe_time_eds_typedefs.h"
+#include "kit_to_eds_cc.h"
+#include "kit_to_eds_typedefs.h"
 
-#include "app_cfg.h"
 #include "sc_sim.h"
 
 
@@ -58,7 +59,7 @@
 #define  COMM  (&(ScSim->Comm))
 #define  FSW   (&(ScSim->Fsw))
 #define  INSTR (&(ScSim->Instr))
-#define  POWER   (&(ScSim->Power))
+#define  POWER (&(ScSim->Power))
 #define  THERM (&(ScSim->Therm))
 
 
@@ -77,6 +78,9 @@ static CFE_TIME_SetTimeCmd_t         CfeSetTimeCmd;
 static CFE_EVS_ClearLogCmd_t         CfeClrEventLogCmd;
 static CFE_EVS_EnableAppEventsCmd_t  CfeEnaAppEventsCmd;
 static CFE_EVS_DisableAppEventsCmd_t CfeDisAppEventsCmd;
+static KIT_TO_StartEvtLogPlbk_t      KitToStartEvtLogPlaybkCmd;
+static KIT_TO_StopEvtLogPlbk_t       KitToStopEvtLogPlaybkCmd;
+
 
 /*
 ** Scanf used to load event command parameters
@@ -287,30 +291,42 @@ void SC_SIM_Constructor(SC_SIM_Class_t *ScSimPtr, INITBL_Class_t *IniTbl,
    THERM_Init(THERM);
 
    CFE_MSG_Init(CFE_MSG_PTR(ScSim->MgmtTlm.TelemetryHeader), 
-                CFE_SB_ValueToMsgId(INITBL_GetIntConfig(IniTbl, CFG_SC_SIM_MGMT_TLM_TOPICID)),
+                CFE_SB_ValueToMsgId(INITBL_GetIntConfig(IniTbl, SC_SIM_MGMT_TLM_TOPICID)),
                 sizeof(SC_SIM_MgmtTlm_t));
 
    CFE_MSG_Init(CFE_MSG_PTR(ScSim->ModelTlm.TelemetryHeader), 
-                CFE_SB_ValueToMsgId(INITBL_GetIntConfig(IniTbl, CFG_SC_SIM_MODEL_TLM_TOPICID)),
+                CFE_SB_ValueToMsgId(INITBL_GetIntConfig(IniTbl, SC_SIM_MODEL_TLM_TOPICID)),
                 sizeof(SC_SIM_ModelTlm_t));
 
    CFE_MSG_Init(CFE_MSG_PTR(CfeSetTimeCmd.CommandBase), 
-                CFE_SB_ValueToMsgId(CFE_MISSION_TIME_CMD_TOPICID), sizeof(CFE_TIME_SetTimeCmd_t));
+                CFE_SB_ValueToMsgId(INITBL_GetIntConfig(IniTbl, TIME_CMD_TOPICID)), sizeof(CFE_TIME_SetTimeCmd_t));
    CFE_MSG_SetFcnCode(CFE_MSG_PTR(CfeSetTimeCmd.CommandBase), CFE_TIME_SET_TIME_CC);
 
-   CFE_MSG_Init(CFE_MSG_PTR(CfeClrEventLogCmd.CommandBase),
-                CFE_SB_ValueToMsgId(CFE_MISSION_EVS_CMD_TOPICID), sizeof(CFE_EVS_ClearLogCmd_t));
-   CFE_MSG_SetFcnCode(CFE_MSG_PTR(CfeClrEventLogCmd.CommandBase), CFE_EVS_CLEAR_LOG_CC);
-   CFE_MSG_GenerateChecksum(CFE_MSG_PTR(CfeClrEventLogCmd.CommandBase));
+   CFE_MSG_Init(CFE_MSG_PTR(CfeClrEventLogCmd),
+                CFE_SB_ValueToMsgId(INITBL_GetIntConfig(IniTbl, EVS_CMD_TOPICID)), sizeof(CFE_EVS_ClearLogCmd_t));
+   CFE_MSG_SetFcnCode(CFE_MSG_PTR(CfeClrEventLogCmd), CFE_EVS_CLEAR_LOG_CC);
+   CFE_MSG_GenerateChecksum(CFE_MSG_PTR(CfeClrEventLogCmd));
     
    CFE_MSG_Init(CFE_MSG_PTR(CfeEnaAppEventsCmd.CommandBase), 
-                CFE_SB_ValueToMsgId(CFE_MISSION_EVS_CMD_TOPICID), sizeof(CFE_EVS_EnableAppEventsCmd_t));
+                CFE_SB_ValueToMsgId(INITBL_GetIntConfig(IniTbl, EVS_CMD_TOPICID)), sizeof(CFE_EVS_EnableAppEventsCmd_t));
    CFE_MSG_SetFcnCode(CFE_MSG_PTR(CfeEnaAppEventsCmd.CommandBase), CFE_EVS_ENABLE_APP_EVENTS_CC);
 
    CFE_MSG_Init(CFE_MSG_PTR(CfeDisAppEventsCmd.CommandBase),
-                CFE_SB_ValueToMsgId(CFE_MISSION_EVS_CMD_TOPICID), sizeof(CFE_EVS_DisableAppEventsCmd_t));
+                CFE_SB_ValueToMsgId(INITBL_GetIntConfig(IniTbl, EVS_CMD_TOPICID)), sizeof(CFE_EVS_DisableAppEventsCmd_t));
    CFE_MSG_SetFcnCode(CFE_MSG_PTR(CfeDisAppEventsCmd.CommandBase), CFE_EVS_DISABLE_APP_EVENTS_CC);
    
+   CFE_MSG_Init(CFE_MSG_PTR(KitToStartEvtLogPlaybkCmd),
+                CFE_SB_ValueToMsgId(INITBL_GetIntConfig(IniTbl, CFG_KIT_TO_CMD_TOPICID)),
+                sizeof(KIT_TO_StartEvtLogPlbk_t));
+   CFE_MSG_SetFcnCode(CFE_MSG_PTR(KitToStartEvtLogPlaybkCmd.CommandBase), KIT_TO_START_EVT_LOG_PLBK_CC);
+   CFE_MSG_GenerateChecksum(CFE_MSG_PTR(KitToStartEvtLogPlaybkCmd.CommandBase));
+
+   CFE_MSG_Init(CFE_MSG_PTR(KitToStopEvtLogPlaybkCmd.CommandBase),
+                CFE_SB_ValueToMsgId(INITBL_GetIntConfig(IniTbl, CFG_KIT_TO_CMD_TOPICID)),
+                sizeof(KIT_TO_StopEvtLogPlbk_t));
+   CFE_MSG_SetFcnCode(CFE_MSG_PTR(KitToStopEvtLogPlaybkCmd.CommandBase), KIT_TO_STOP_EVT_LOG_PLBK_CC);
+   CFE_MSG_GenerateChecksum(CFE_MSG_PTR(KitToStopEvtLogPlaybkCmd.CommandBase));
+
 
 } /* End SC_SIM_Constructor() */
 
@@ -449,6 +465,57 @@ bool SC_SIM_Execute(void)
 
 
 /******************************************************************************
+** Functions: SC_SIM_ProcessMqttJsonCmd
+**
+** Process commands from an MQTT broker
+**
+** Notes:
+**  1. The JSON commands are designed to have a single parameter that can map
+**     to SC_SIM commands. The commands are intentionally designed so no other
+**     parameters are required. The MQTT interface is used in educational
+**     environments so user choices are minimized. 
+**
+*/
+bool SC_SIM_ProcessMqttJsonCmd(void *DataObjPtr, const CFE_MSG_Message_t *MsgPtr)
+{
+
+   bool RetStatus = true;
+   const SC_SIM_MqttJsonCmd_Payload_t *MqttJsonCmd = CMDMGR_PAYLOAD_PTR(MsgPtr,SC_SIM_MqttJsonCmd_t);
+   SC_SIM_StartSim_t StartSimCmd;
+  
+   CFE_EVS_SendEvent(SC_SIM_PROCESS_MQTT_CMD_EID, CFE_EVS_EventType_INFORMATION,
+                     "SC_SIM_ProcessMqttJsonCmd() %d", MqttJsonCmd->Id);
+   
+   switch (MqttJsonCmd->Id)
+   {
+      case SC_SIM_MqttJsonCmdId_START_SIM_1:
+         StartSimCmd.Payload.ScenarioId = SC_SIM_Scenario_GND_CONTACT_1;
+         SC_SIM_StartSimCmd(DataObjPtr, CFE_MSG_PTR(StartSimCmd));
+         break;
+      case SC_SIM_MqttJsonCmdId_START_SIM_2:
+         StartSimCmd.Payload.ScenarioId = SC_SIM_Scenario_GND_CONTACT_2;
+         SC_SIM_StartSimCmd(DataObjPtr, CFE_MSG_PTR(StartSimCmd));
+         break;
+      case SC_SIM_MqttJsonCmdId_STOP_SIM:
+         SC_SIM_StopSimCmd(DataObjPtr, NULL);
+         break;
+      case SC_SIM_MqttJsonCmdId_START_EVT_PLBK:
+         SC_SIM_StartPlbkCmd(DataObjPtr, NULL);         
+         break;
+      case SC_SIM_MqttJsonCmdId_STOP_EVT_PLBK:
+         SC_SIM_StopPlbkCmd(DataObjPtr, NULL);
+         break;
+      default:
+         CFE_EVS_SendEvent(SC_SIM_PROCESS_MQTT_CMD_EID, CFE_EVS_EventType_ERROR,
+                           "SC_SIM received invalid MQTT JSON command ID %d", MqttJsonCmd->Id);
+   }
+   
+   return RetStatus;
+
+} /* End SC_SIM_ProcessMqttJsonCmd() */
+
+
+/******************************************************************************
 ** Function:  SC_SIM_ResetStatus
 **
 */
@@ -569,7 +636,8 @@ bool SC_SIM_StartSimCmd(void *DataObjPtr, const CFE_MSG_Message_t *MsgPtr)
          } /* End if !SimEndCmdFound */
       } /* End scenario loop */
 
-      CFE_EVS_SendEvent(SC_SIM_START_SIM_EID, CFE_EVS_EventType_INFORMATION, "Start Simulation using scenario %d with %d available runtime cmd entries starting at index %d",
+      CFE_EVS_SendEvent(SC_SIM_START_SIM_EID, CFE_EVS_EventType_INFORMATION,
+                        "Start Simulation using scenario %d with %d available runtime cmd entries starting at index %d",
                         StartSim->ScenarioId, (SC_SIM_EVT_CMD_MAX-ScSim->RunTimeCmdIdx), ScSim->RunTimeCmdIdx);
 
       #if (SC_SIM_DEBUG == 1)
@@ -615,10 +683,19 @@ bool SC_SIM_StopSimCmd (void *DataObjPtr, const CFE_MSG_Message_t *MsgPtr)
 bool SC_SIM_StartPlbkCmd (void *DataObjPtr, const CFE_MSG_Message_t *MsgPtr)
 {
 
-   bool RetStatus = true;
+   bool RetStatus = false;
   
-   ScSim->Fsw.Recorder.PlaybackEna = true;
-   CFE_EVS_SendEvent(SC_SIM_START_REC_PLBK_EID, CFE_EVS_EventType_INFORMATION,"FSW recorder playback started"); 
+   if (ScSim->Comm.InContact)
+   {
+      ScSim->Fsw.Recorder.PlaybackEna = true;
+      CFE_SB_TransmitMsg(CFE_MSG_PTR(KitToStartEvtLogPlaybkCmd.CommandBase), true);
+      CFE_EVS_SendEvent(SC_SIM_START_REC_PLBK_EID, CFE_EVS_EventType_INFORMATION,"FSW recorder playback started"); 
+      RetStatus = true;
+   }
+   else
+   {
+      CFE_EVS_SendEvent(SC_SIM_START_REC_PLBK_EID, CFE_EVS_EventType_ERROR,"Start playback command rejected because not in ground contact");    
+   }
    
    return RetStatus;
 
@@ -640,6 +717,7 @@ bool SC_SIM_StopPlbkCmd (void *DataObjPtr, const CFE_MSG_Message_t *MsgPtr)
    bool RetStatus = true;
   
    ScSim->Fsw.Recorder.PlaybackEna = false;
+   CFE_SB_TransmitMsg(CFE_MSG_PTR(KitToStopEvtLogPlaybkCmd.CommandBase), true);
    CFE_EVS_SendEvent(SC_SIM_STOP_REC_PLBK_EID, CFE_EVS_EventType_INFORMATION,"FSW recorder playback stopped"); 
          
    return RetStatus;
@@ -1060,8 +1138,10 @@ static void SIM_StopSim(void)
    ScSim->Active       = false;
    ScSim->Phase        = SC_SIM_Phase_IDLE;
    
-   ScSim->LastEventCmd   = &SimIdleCmd;
-   ScSim->NextEventCmd   = &SimIdleCmd;
+   ScSim->LastEventCmd = &SimIdleCmd;
+   ScSim->NextEventCmd = &SimIdleCmd;
+
+   SC_SIM_StopPlbkCmd(NULL, NULL);
 
    strcpy(CfeEnaAppEventsCmd.Payload.AppName,"CFE_SB");
    CFE_MSG_GenerateChecksum(CFE_MSG_PTR(CfeEnaAppEventsCmd.CommandBase));
@@ -1552,7 +1632,8 @@ static bool FSW_ProcessEventCmd(FSW_Model_t* Fsw, const SC_SIM_EventCmd_t* Event
       break;
 
    case FSW_EVT_CLR_EVT_LOG:
-      CFE_SB_TransmitMsg(CFE_MSG_PTR(CfeClrEventLogCmd.CommandBase), true);
+OS_printf("CFE_SB_TransmitMsg(CFE_MSG_PTR(CfeClrEventLogCmd), true);\n");
+      CFE_SB_TransmitMsg(CFE_MSG_PTR(CfeClrEventLogCmd), true);
       break;
 
    default:

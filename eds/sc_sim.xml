@@ -60,15 +60,15 @@
         <IntegerDataEncoding sizeInBits="8" encoding="unsigned" />
         <EnumerationList>
           <Enumeration label="UNDEF" value="0" shortDescription="Undefined subsystem" />
-          <Enumeration label="SIM"   value="1" shortDescription="No sim events/commands being processed" />
-          <Enumeration label="ADCS"  value="2" shortDescription="Initializing the simulation" />
-          <Enumeration label="CDH"   value="3" shortDescription="Process blocks of time greater than one second" />
-          <Enumeration label="COMM"  value="4" shortDescription="Processing events aligned with actually time" />
-          <Enumeration label="FSW"   value="5" shortDescription="Processing events aligned with actually time" />
-          <Enumeration label="INSTR" value="6" shortDescription="Processing events aligned with actually time" />
-          <Enumeration label="POWER" value="7" shortDescription="Processing events aligned with actually time" />
-          <Enumeration label="THERM" value="8" shortDescription="Processing events aligned with actually time" />
-          <Enumeration label="COUNT" value="9" shortDescription="Processing events aligned with actually time" />
+          <Enumeration label="SIM"   value="1" shortDescription="Commands to simulation engine" />
+          <Enumeration label="ADCS"  value="2" shortDescription="Attitude Determination and Control" />
+          <Enumeration label="CDH"   value="3" shortDescription="Command and Data Handling" />
+          <Enumeration label="COMM"  value="4" shortDescription="Communications" />
+          <Enumeration label="FSW"   value="5" shortDescription="Flight Software" />
+          <Enumeration label="INSTR" value="6" shortDescription="Instrument" />
+          <Enumeration label="POWER" value="7" shortDescription="Power" />
+          <Enumeration label="THERM" value="8" shortDescription="Thermal" />
+          <Enumeration label="COUNT" value="9" shortDescription="Number of subsystems" />
         </EnumerationList>
       </EnumeratedDataType>
 
@@ -101,6 +101,17 @@
         </EntryList>
       </ContainerDataType>
 
+      <EnumeratedDataType name="MqttJsonCmdId" shortDescription="Identify command received in an MQTT message" >
+        <IntegerDataEncoding sizeInBits="16" encoding="unsigned" />
+        <EnumerationList>
+          <Enumeration label="START_SIM_1"    value="1" shortDescription="StartSim(GND_CONTACT_1)" />
+          <Enumeration label="START_SIM_2"    value="2" shortDescription="StartSim(GND_CONTACT_2)" />
+          <Enumeration label="STOP_SIM"       value="3" shortDescription="StopSim()" />
+          <Enumeration label="START_EVT_PLBK" value="4" shortDescription="StartPlayback()" />
+          <Enumeration label="STOP_EVT_PLBK"  value="5" shortDescription="StopPlayback()" />
+        </EnumerationList>
+      </EnumeratedDataType>
+
       <!--***************************************-->
       <!--**** DataTypeSet: Command Payloads ****-->
       <!--***************************************-->
@@ -124,6 +135,12 @@
       <ContainerDataType name="StartSim_Payload" shortDescription="Start a predefined simulation scenario">
         <EntryList>
           <Entry name="ScenarioId"    type="Scenario"   shortDescription="See sc_sim.c for scenario definitions" />
+       </EntryList>
+      </ContainerDataType>
+
+      <ContainerDataType name="MqttJsonCmd_Payload" shortDescription="">
+        <EntryList>
+          <Entry name="Id"  type="MqttJsonCmdId"  shortDescription="" />
        </EntryList>
       </ContainerDataType>
 
@@ -277,6 +294,16 @@
           <ValueConstraint entry="Sec.FunctionCode" value="${APP_C_FW/APP_BASE_CC} + 3" />
         </ConstraintSet>
       </ContainerDataType>
+
+      <ContainerDataType name="MqttJsonCmd" baseType="CommandBase" shortDescription="">
+        <ConstraintSet>
+          <ValueConstraint entry="Sec.FunctionCode" value="${APP_C_FW/APP_BASE_CC} + 4" />
+        </ConstraintSet>
+        <EntryList>
+          <Entry type="MqttJsonCmd_Payload" name="Payload" />
+        </EntryList>
+      </ContainerDataType>
+
 
       <!--****************************************-->
       <!--**** DataTypeSet: Telemetry Packets ****-->

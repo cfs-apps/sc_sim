@@ -41,6 +41,7 @@
 
 #include "app_cfg.h"
 #include "sc_sim_tbl.h"
+#include "sc_sim_eds_typedefs.h"
 
 /***********************/
 /** Macro Definitions **/
@@ -51,18 +52,19 @@
 ** Event Message IDs
 */
 
-#define SC_SIM_START_SIM_EID      (SC_SIM_BASE_EID +  0)
-#define SC_SIM_START_SIM_ERR_EID  (SC_SIM_BASE_EID +  1)
-#define SC_SIM_STOP_SIM_EID       (SC_SIM_BASE_EID +  2)
-#define SC_SIM_LOAD_TBL_EID       (SC_SIM_BASE_EID +  3)
-#define SC_SIM_LOAD_TBL_OBJ_EID   (SC_SIM_BASE_EID +  4)
-#define SC_SIM_START_REC_PLBK_EID (SC_SIM_BASE_EID +  5)
-#define SC_SIM_STOP_REC_PLBK_EID  (SC_SIM_BASE_EID +  6)
-#define SC_SIM_ADD_EVENT_EID      (SC_SIM_BASE_EID +  7)
-#define SC_SIM_EXECUTE_EVENT_EID  (SC_SIM_BASE_EID +  8)
-#define SC_SIM_EVENT_ERR_EID      (SC_SIM_BASE_EID +  9)
-#define SC_SIM_EXECUTE_EID        (SC_SIM_BASE_EID + 10)
-#define SC_SIM_ACCEPT_NEW_TBL_EID (SC_SIM_BASE_EID + 11)
+#define SC_SIM_START_SIM_EID        (SC_SIM_BASE_EID +  0)
+#define SC_SIM_START_SIM_ERR_EID    (SC_SIM_BASE_EID +  1)
+#define SC_SIM_STOP_SIM_EID         (SC_SIM_BASE_EID +  2)
+#define SC_SIM_LOAD_TBL_EID         (SC_SIM_BASE_EID +  3)
+#define SC_SIM_LOAD_TBL_OBJ_EID     (SC_SIM_BASE_EID +  4)
+#define SC_SIM_START_REC_PLBK_EID   (SC_SIM_BASE_EID +  5)
+#define SC_SIM_STOP_REC_PLBK_EID    (SC_SIM_BASE_EID +  6)
+#define SC_SIM_ADD_EVENT_EID        (SC_SIM_BASE_EID +  7)
+#define SC_SIM_EXECUTE_EVENT_EID    (SC_SIM_BASE_EID +  8)
+#define SC_SIM_EVENT_ERR_EID        (SC_SIM_BASE_EID +  9)
+#define SC_SIM_EXECUTE_EID          (SC_SIM_BASE_EID + 10)
+#define SC_SIM_ACCEPT_NEW_TBL_EID   (SC_SIM_BASE_EID + 11)
+#define SC_SIM_PROCESS_MQTT_CMD_EID (SC_SIM_BASE_EID + 12)
 
 #define ADCS_ENTER_ECLIPSE_EID    (SC_SIM_BASE_EID + 20)
 #define ADCS_EXIT_ECLIPSE_EID     (SC_SIM_BASE_EID + 21)
@@ -602,6 +604,21 @@ void SC_SIM_Constructor(SC_SIM_Class_t *ScSimPtr, INITBL_Class_t *IniTbl,
 **
 */
 bool SC_SIM_Execute(void);
+
+
+/******************************************************************************
+** Functions: SC_SIM_ProcessMqttJsonCmd
+**
+** Process commands from an MQTT broker
+**
+** Notes:
+**  1. The JSON commands are designed to have a single parameter that can map
+**     to SC_SIM commands. The commands are intentionally designed so no other
+**     parameters are required. The MQTT interface is used in educational
+**     environments so user choices are minimized. 
+**
+*/
+bool SC_SIM_ProcessMqttJsonCmd(void *DataObjPtr, const CFE_MSG_Message_t *MsgPtr);
 
 
 /******************************************************************************

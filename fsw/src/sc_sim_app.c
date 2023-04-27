@@ -188,10 +188,11 @@ static int32 InitApp(void)
       CMDMGR_RegisterFunc(CMDMGR_OBJ, SC_SIM_LOAD_TBL_CC,  TBLMGR_OBJ, TBLMGR_LoadTblCmd, TBLMGR_LOAD_TBL_CMD_DATA_LEN);
       CMDMGR_RegisterFunc(CMDMGR_OBJ, SC_SIM_DUMP_TBL_CC,  TBLMGR_OBJ, TBLMGR_DumpTblCmd, TBLMGR_DUMP_TBL_CMD_DATA_LEN);
        
-      CMDMGR_RegisterFunc(CMDMGR_OBJ, SC_SIM_START_SIM_CC,      SC_SIM, SC_SIM_StartSimCmd,  sizeof(SC_SIM_StartSim_Payload_t));
-      CMDMGR_RegisterFunc(CMDMGR_OBJ, SC_SIM_STOP_SIM_CC,       SC_SIM, SC_SIM_StopSimCmd,   0);
-      CMDMGR_RegisterFunc(CMDMGR_OBJ, SC_SIM_START_PLAYBACK_CC, SC_SIM, SC_SIM_StartPlbkCmd, 0);
-      CMDMGR_RegisterFunc(CMDMGR_OBJ, SC_SIM_STOP_PLAYBACK_CC,  SC_SIM, SC_SIM_StopPlbkCmd,  0);
+      CMDMGR_RegisterFunc(CMDMGR_OBJ, SC_SIM_START_SIM_CC,      SC_SIM, SC_SIM_StartSimCmd,        sizeof(SC_SIM_StartSim_Payload_t));
+      CMDMGR_RegisterFunc(CMDMGR_OBJ, SC_SIM_STOP_SIM_CC,       SC_SIM, SC_SIM_StopSimCmd,         0);
+      CMDMGR_RegisterFunc(CMDMGR_OBJ, SC_SIM_START_PLAYBACK_CC, SC_SIM, SC_SIM_StartPlbkCmd,       0);
+      CMDMGR_RegisterFunc(CMDMGR_OBJ, SC_SIM_STOP_PLAYBACK_CC,  SC_SIM, SC_SIM_StopPlbkCmd,        0);
+      CMDMGR_RegisterFunc(CMDMGR_OBJ, SC_SIM_MQTT_JSON_CC,      SC_SIM, SC_SIM_ProcessMqttJsonCmd, sizeof(SC_SIM_MqttJsonCmd_Payload_t));
 
       CFE_MSG_Init(CFE_MSG_PTR(ScSimApp.HkTlm.TelemetryHeader), 
                    CFE_SB_ValueToMsgId(INITBL_GetIntConfig(INITBL_OBJ, CFG_SC_SIM_HK_TLM_TOPICID)),

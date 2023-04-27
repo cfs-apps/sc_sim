@@ -35,7 +35,7 @@
 #include "cfe.h"
 #include "sc_sim_platform_cfg.h"
 #include "app_c_fw.h"
-#include "sc_sim_eds_typedefs.h"
+
 
 /******************************************************************************
 ** SC_SIM Application Macros
@@ -76,11 +76,14 @@
 #define CFG_APP_CMD_PIPE_DEPTH  APP_CMD_PIPE_DEPTH
 #define CFG_APP_CMD_PIPE_NAME   APP_CMD_PIPE_NAME
 
-#define CFG_SC_SIM_CMD_TOPICID    SC_SIM_CMD_TOPICID
-#define CFG_BC_SCH_1_HZ_TOPICID   BC_SCH_1_HZ_TOPICID
-#define CFG_SC_SIM_HK_TLM_TOPICID SC_SIM_HK_TLM_TOPICID
-#define CFG_SC_SIM_MGMT_TLM_TOPICID   SC_SIM_MGMT_TLM_TOPICID
-#define CFG_SC_SIM_MODEL_TLM_TOPICID  SC_SIM_MODEL_TLM_TOPICID
+#define CFG_SC_SIM_CMD_TOPICID       SC_SIM_CMD_TOPICID
+#define CFG_BC_SCH_1_HZ_TOPICID      BC_SCH_1_HZ_TOPICID
+#define CFG_SC_SIM_HK_TLM_TOPICID    SC_SIM_HK_TLM_TOPICID
+#define CFG_SC_SIM_MGMT_TLM_TOPICID  SC_SIM_MGMT_TLM_TOPICID
+#define CFG_SC_SIM_MODEL_TLM_TOPICID SC_SIM_MODEL_TLM_TOPICID
+#define CFG_KIT_TO_CMD_TOPICID       KIT_TO_CMD_TOPICID
+#define CFG_EVS_CMD_TOPICID          EVS_CMD_TOPICID
+#define CFG_TIME_CMD_TOPICID         TIME_CMD_TOPICID
 
 #define CFG_SC_SIM_TBL_LOAD_FILE  SC_SIM_TBL_LOAD_FILE
 #define CFG_SC_SIM_TBL_DUMP_FILE  SC_SIM_TBL_DUMP_FILE
@@ -96,6 +99,9 @@
    XX(SC_SIM_HK_TLM_TOPICID,uint32) \
    XX(SC_SIM_MGMT_TLM_TOPICID,uint32) \
    XX(SC_SIM_MODEL_TLM_TOPICID,uint32) \
+   XX(KIT_TO_CMD_TOPICID,uint32) \
+   XX(EVS_CMD_TOPICID,uint32) \
+   XX(TIME_CMD_TOPICID,uint32) \
    XX(SC_SIM_TBL_LOAD_FILE,char*) \
    XX(SC_SIM_TBL_DUMP_FILE,char*) \
 
@@ -113,7 +119,7 @@ DECLARE_ENUM(Config,APP_CONFIG)
 #define SC_SIM_APP_BASE_EID  (APP_C_FW_APP_BASE_EID +  0)
 #define SC_SIM_BASE_EID      (APP_C_FW_APP_BASE_EID + 10)
 #define SC_SIM_TBL_BASE_EID  (APP_C_FW_APP_BASE_EID + 50)
-
+        
 /*
 ** One event ID is used for all initialization debug messages. Uncomment one of
 ** the SC_SIM_INIT_EVS_TYPE definitions. Set it to INFORMATION if you want to
