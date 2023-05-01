@@ -48,7 +48,7 @@
 */
 
 #define  SC_SIM_MAJOR_VER      1
-#define  SC_SIM_MINOR_VER      0
+#define  SC_SIM_MINOR_VER      1
 
 
 /******************************************************************************
