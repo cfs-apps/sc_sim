@@ -48,7 +48,6 @@ static bool CfeToJson(const char **JsonMsgPayload, const CFE_MSG_Message_t *CfeM
 static bool JsonToCfe(CFE_MSG_Message_t **CfeMsg, const char *JsonMsgPayload, uint16 PayloadLen);
 static bool LoadJsonData(const char *JsonMsgPayload, uint16 PayloadLen);
 static void SbMsgTest(bool Init, int16 Param);
-static char *ReplaceQuotes(char *Str, char Find, char Replace);
 
 
 /**********************/
@@ -116,6 +115,32 @@ OS_printf("SC_SIM_MQTT_TOPIC_EVENT_MSG_Constructor()\n");
 
 
 /******************************************************************************
+** Function: SC_SIM_MQTT_TOPIC_EVENT_MSG_ReplaceQuote
+**;
+** Replace all ocurrences of a character in a string.
+**
+** Notes:
+**   1. Main use case is for replacing double quotes with single quaotes in
+**      JSON messages.
+**
+*/
+char* SC_SIM_MQTT_TOPIC_EVENT_MSG_ReplaceQuotes(char *Str, char Find, char Replace)
+{
+   
+   char *CurrentPos = strchr(Str,Find);
+   
+   while (CurrentPos)
+   {
+      *CurrentPos = Replace;
+      CurrentPos = strchr(CurrentPos,Find);
+   }
+   
+   return Str;
+    
+} /* End SC_SIM_MQTT_TOPIC_EVENT_MSG_ReplaceQuote() */
+
+
+/******************************************************************************
 ** Function: CfeToJson
 **
 ** Convert a CFE_EVS Event Message to a JSON topic message 
@@ -136,7 +161,7 @@ static bool CfeToJson(const char **JsonMsgPayload, const CFE_MSG_Message_t *CfeM
    
    // Events with double quotes cause JSON parser to barf so replace with single quotes
    strncpy(EventText, EventPayload->Message, EVENT_MSG_LEN);
-   ReplaceQuotes(EventText,'\"','\'');
+   SC_SIM_MQTT_TOPIC_EVENT_MSG_ReplaceQuotes(EventText,'\"','\'');
    
    PayloadLen = sprintf(MqttTopicEventMsg->JsonMsgPayload,
                         "{\"time\": %d,\"app\": \"%s\",\"type\": %d,\"text\": \"%s\"}",
@@ -261,13 +286,3 @@ static bool LoadJsonData(const char *JsonMsgPayload, uint16 PayloadLen)
    
 } /* End LoadJsonData() */
 
-static char* ReplaceQuotes(char *Str, char Find, char Replace)
-{
-    char *CurrentPos = strchr(Str,Find);
-    while (CurrentPos)
-    {
-        *CurrentPos = Replace;
-        CurrentPos = strchr(CurrentPos,Find);
-    }
-    return Str;
-}

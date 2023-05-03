@@ -31,6 +31,7 @@
 */
 
 #include "sc_sim_mqtt_topic_event_plbk.h"
+#include "sc_sim_mqtt_topic_event_msg.h"
 
 
 /***********************/
@@ -161,9 +162,17 @@ static bool CfeToJson(const char **JsonMsgPayload, const CFE_MSG_Message_t *CfeM
    bool  RetStatus = false;
    int   PayloadLen; 
    const KIT_TO_PlbkEventTlm_Payload_t *PlbkEventMsg = CMDMGR_PAYLOAD_PTR(CfeMsg, KIT_TO_PlbkEventTlm_t);
+   KIT_TO_PlbkEventTlm_Payload_t LocalMsg;
 
    *JsonMsgPayload = NullEventPlbkMsg;
    
+   // TODO: This is a quick fix to meet a deadline. A longterm solution shoudl include KIT_TO to change messages when
+   // TODO: the event log is processed and/or make a cFS Basecamp system strategy to avoid double quotes in events  
+   for (int i=0; i<4; i++)
+   {
+      strncpy(LocalMsg.Event[i].Message,PlbkEventMsg->Event[i].Message,CFE_MISSION_EVS_MAX_MESSAGE_LENGTH);
+      SC_SIM_MQTT_TOPIC_EVENT_MSG_ReplaceQuotes(LocalMsg.Event[i].Message,'\"','\'');
+   }
    PayloadLen = sprintf(MqttTopicEventPlbk->JsonMsgPayload,
                         "{\"log_file\": \"%s\",\"event_count\": %d,\"plbk_index\": %d, \
                         \"event1_time\": %d,\"event1_app\": \"%s\",\"event1_type\": %d,\"event1_msg\": \"%s\", \
@@ -171,10 +180,10 @@ static bool CfeToJson(const char **JsonMsgPayload, const CFE_MSG_Message_t *CfeM
                         \"event3_time\": %d,\"event3_app\": \"%s\",\"event3_type\": %d,\"event3_msg\": \"%s\", \
                         \"event4_time\": %d,\"event4_app\": \"%s\",\"event4_type\": %d,\"event4_msg\": \"%s\"}",
                         PlbkEventMsg->EventLogFile, PlbkEventMsg->EventCnt, PlbkEventMsg->PlbkIdx,
-                        PlbkEventMsg->Event[0].Time.Seconds, PlbkEventMsg->Event[0].PacketID.AppName, PlbkEventMsg->Event[0].PacketID.EventType, PlbkEventMsg->Event[0].Message,
-                        PlbkEventMsg->Event[1].Time.Seconds, PlbkEventMsg->Event[1].PacketID.AppName, PlbkEventMsg->Event[1].PacketID.EventType, PlbkEventMsg->Event[1].Message,
-                        PlbkEventMsg->Event[2].Time.Seconds, PlbkEventMsg->Event[2].PacketID.AppName, PlbkEventMsg->Event[2].PacketID.EventType, PlbkEventMsg->Event[2].Message,
-                        PlbkEventMsg->Event[3].Time.Seconds, PlbkEventMsg->Event[3].PacketID.AppName, PlbkEventMsg->Event[3].PacketID.EventType, PlbkEventMsg->Event[3].Message);
+                        PlbkEventMsg->Event[0].Time.Seconds, PlbkEventMsg->Event[0].PacketID.AppName, PlbkEventMsg->Event[0].PacketID.EventType, LocalMsg.Event[0].Message,
+                        PlbkEventMsg->Event[1].Time.Seconds, PlbkEventMsg->Event[1].PacketID.AppName, PlbkEventMsg->Event[1].PacketID.EventType, LocalMsg.Event[1].Message,
+                        PlbkEventMsg->Event[2].Time.Seconds, PlbkEventMsg->Event[2].PacketID.AppName, PlbkEventMsg->Event[2].PacketID.EventType, LocalMsg.Event[2].Message,
+                        PlbkEventMsg->Event[3].Time.Seconds, PlbkEventMsg->Event[3].PacketID.AppName, PlbkEventMsg->Event[3].PacketID.EventType, LocalMsg.Event[3].Message);
 
    if (PayloadLen > 0)
    {

@@ -95,6 +95,7 @@ function onMessageArrived(message){
 
     }
     if (message.destinationName == "basecamp/sc_sim/event_plbk"){
+       //document.getElementById("messages").innerHTML += "<span> Playback: "+message.payloadString+"</span><br>";
        const plbk = JSON.parse(message.payloadString);
 
        document.getElementById("playback_event_messages").innerHTML = 
@@ -139,7 +140,7 @@ function sendScSimCommand(cmd_id){
    Message = new Paho.MQTT.Message(payload);
    Message.destinationName = "basecamp/sc_sim/cmd";
 
-   if (cmd_id == 1 || cmd_id == 2){
+   if (cmd_id <= 3){
       
        document.getElementById("playback_event_messages").innerHTML = " "
       

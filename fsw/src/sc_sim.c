@@ -1724,7 +1724,7 @@ static bool INSTR_ProcessEventCmd(INSTR_Model_t *Instr, const SC_SIM_EventCmd_t 
       break;
 
    case INSTR_EVT_DIS_POWER:
-      CFE_EVS_SendEvent(INSTR_DIS_POWER_EID, CFE_EVS_EventType_INFORMATION, "INSTR: Science intrument powered off");       
+      CFE_EVS_SendEvent(INSTR_DIS_POWER_EID, CFE_EVS_EventType_INFORMATION, "INSTR: Science instrument powered off");       
       Instr->PwrEna = false;
       break;
 

@@ -585,7 +585,7 @@ typedef struct
 /******************************************************************************
 ** Function: SC_SIM_Constructor
 **
-** Initialize the intrument simulator to a known state
+** Initialize the instrument simulator to a known state
 **
 ** Notes:
 **   1. This must be called prior to any other function.

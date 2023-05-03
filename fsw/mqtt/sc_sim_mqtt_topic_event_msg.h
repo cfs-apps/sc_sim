@@ -104,4 +104,17 @@ void SC_SIM_MQTT_TOPIC_EVENT_MSG_Constructor(SC_SIM_MQTT_TOPIC_EVENT_MSG_Class_t
                                              CFE_SB_MsgId_t TlmMsgMid);
 
 
+/******************************************************************************
+** Function: SC_SIM_MQTT_TOPIC_EVENT_MSG_ReplaceQuote
+**;
+** Replace all ocurrences of a character in a string.
+**
+** Notes:
+**   1. Main use case is for replacing double quotes with single quaotes in
+**      JSON messages.
+**
+*/
+char* SC_SIM_MQTT_TOPIC_EVENT_MSG_ReplaceQuotes(char *Str, char Find, char Replace);
+
+
 #endif /* _sc_sim_mqtt_topic_event_msg_ */
