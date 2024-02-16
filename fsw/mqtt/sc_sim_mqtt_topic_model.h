@@ -18,9 +18,6 @@
 ** Notes:
 **   1. The JSON payload format is defined in the .c file.
 **
-** References:
-**   1. Basecamp Object-based Application Developer's Guide
-**
 */
 
 #ifndef _sc_sim_mqtt_topic_model_

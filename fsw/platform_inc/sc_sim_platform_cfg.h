@@ -17,10 +17,6 @@
 ** Notes:
 **   1. See JSON init file for runtime configurations.
 **
-** References:
-**   1. cFS Basecamp Object-based Application Developer's Guide.
-**   2. cFS Application Developer's Guide.
-**
 */
 
 #ifndef _sc_sim_platform_cfg_

@@ -27,9 +27,6 @@
 **      event-sim-model superclass. I would like the sim models to be driven
 **      by 42 reality.
 **
-** References:
-**   1. cFS Basecamp Object-based Application Developer's Guide.
-**   2. cFS Application Developer's Guide.
 */
 
 #ifndef _sc_sim_
@@ -555,6 +552,7 @@ typedef struct
    bool                 Active;
    SC_SIM_Phase_Enum_t  Phase;
    CFE_TIME_SysTime_t   Time;   /* Subseconds unused */
+   uint32               Count;
    
    SC_SIM_EventCmd_t       *LastEventCmd;
    SC_SIM_EventCmd_t       *NextEventCmd;   

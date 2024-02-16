@@ -19,10 +19,6 @@
 **      have a platform scope because the same file name is used for
 **      all applications following the object-based application design.
 **
-** References:
-**   1. cFS Basecamp Object-based Application Developers Guide.
-**   2. cFS Application Developer's Guide.
-**
 */
 
 #ifndef _app_cfg_
@@ -45,6 +41,7 @@
 ** Versions:
 **
 ** 1.0 - Initial release
+** 1.3 - Update to Basecamp v1.12's app_c_fw TBLMGR API
 */
 
 #define  SC_SIM_MAJOR_VER      1
@@ -143,5 +140,6 @@ DECLARE_ENUM(Config,APP_CONFIG)
 */
 
 #define SC_SIM_TBL_JSON_FILE_MAX_CHAR  5000 
+#define SC_SIM_TBL_NAME                "Sim Parameters" 
 
 #endif /* _app_cfg_ */

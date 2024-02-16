@@ -17,10 +17,6 @@
 ** Notes:
 **   None
 **
-** References:
-**   1. cFS Basecamp Object-based Application Developer's Guide.
-**   2. cFS Application Developer's Guide.
-**
 */
 
 /*
@@ -165,7 +161,7 @@ static int32 InitApp(void)
       ScSimApp.ExecuteMid = CFE_SB_ValueToMsgId(INITBL_GetIntConfig(INITBL_OBJ, CFG_BC_SCH_1_HZ_TOPICID));
 
       /* Must constructor table manager prior to any app objects that contain tables */
-      TBLMGR_Constructor(TBLMGR_OBJ);
+      TBLMGR_Constructor(TBLMGR_OBJ, INITBL_GetStrConfig(INITBL_OBJ, CFG_APP_CFE_NAME));
       
       SC_SIM_Constructor(SC_SIM, INITBL_OBJ, TBLMGR_OBJ);
       
@@ -185,14 +181,14 @@ static int32 InitApp(void)
       CMDMGR_RegisterFunc(CMDMGR_OBJ, SC_SIM_NOOP_CC,  NULL, SC_SIM_NoOpCmd,     0);
       CMDMGR_RegisterFunc(CMDMGR_OBJ, SC_SIM_RESET_CC, NULL, SC_SIM_ResetAppCmd, 0);
        
-      CMDMGR_RegisterFunc(CMDMGR_OBJ, SC_SIM_LOAD_TBL_CC,  TBLMGR_OBJ, TBLMGR_LoadTblCmd, TBLMGR_LOAD_TBL_CMD_DATA_LEN);
-      CMDMGR_RegisterFunc(CMDMGR_OBJ, SC_SIM_DUMP_TBL_CC,  TBLMGR_OBJ, TBLMGR_DumpTblCmd, TBLMGR_DUMP_TBL_CMD_DATA_LEN);
+      CMDMGR_RegisterFunc(CMDMGR_OBJ, SC_SIM_LOAD_TBL_CC,  TBLMGR_OBJ, TBLMGR_LoadTblCmd, sizeof(SC_SIM_LoadTbl_CmdPayload_t));
+      CMDMGR_RegisterFunc(CMDMGR_OBJ, SC_SIM_DUMP_TBL_CC,  TBLMGR_OBJ, TBLMGR_DumpTblCmd, sizeof(SC_SIM_DumpTbl_CmdPayload_t));
        
-      CMDMGR_RegisterFunc(CMDMGR_OBJ, SC_SIM_START_SIM_CC,      SC_SIM, SC_SIM_StartSimCmd,        sizeof(SC_SIM_StartSim_Payload_t));
+      CMDMGR_RegisterFunc(CMDMGR_OBJ, SC_SIM_START_SIM_CC,      SC_SIM, SC_SIM_StartSimCmd,        sizeof(SC_SIM_StartSim_CmdPayload_t));
       CMDMGR_RegisterFunc(CMDMGR_OBJ, SC_SIM_STOP_SIM_CC,       SC_SIM, SC_SIM_StopSimCmd,         0);
       CMDMGR_RegisterFunc(CMDMGR_OBJ, SC_SIM_START_PLAYBACK_CC, SC_SIM, SC_SIM_StartPlbkCmd,       0);
       CMDMGR_RegisterFunc(CMDMGR_OBJ, SC_SIM_STOP_PLAYBACK_CC,  SC_SIM, SC_SIM_StopPlbkCmd,        0);
-      CMDMGR_RegisterFunc(CMDMGR_OBJ, SC_SIM_MQTT_JSON_CC,      SC_SIM, SC_SIM_ProcessMqttJsonCmd, sizeof(SC_SIM_MqttJsonCmd_Payload_t));
+      CMDMGR_RegisterFunc(CMDMGR_OBJ, SC_SIM_MQTT_JSON_CC,      SC_SIM, SC_SIM_ProcessMqttJsonCmd, sizeof(SC_SIM_MqttJsonCmd_CmdPayload_t));
 
       CFE_MSG_Init(CFE_MSG_PTR(ScSimApp.HkTlm.TelemetryHeader), 
                    CFE_SB_ValueToMsgId(INITBL_GetIntConfig(INITBL_OBJ, CFG_SC_SIM_HK_TLM_TOPICID)),
@@ -291,8 +287,9 @@ static void SendHkTlm(void)
    **   Should be included
    */
 
-   Payload->LastTblAction  = LastTbl->LastAction;
-   Payload->SimTblLoaded   = ScSimApp.ScSim.Tbl.Loaded;
+   Payload->LastTblAction       = LastTbl->LastAction;
+   Payload->LastTblActionStatus = LastTbl->LastActionStatus;   
+   Payload->SimTblLoaded        = ScSimApp.ScSim.Tbl.Loaded;
    
    /*
    ** Spacecraft Simulator 
@@ -301,6 +298,7 @@ static void SendHkTlm(void)
    Payload->SimActive = ScSimApp.ScSim.Active;
    Payload->SimPhase  = ScSimApp.ScSim.Phase;
    Payload->SimTime   = ScSimApp.ScSim.Time.Seconds;
+   Payload->SimCount  = ScSimApp.ScSim.Count;
    
    CFE_SB_TimeStampMsg(CFE_MSG_PTR(ScSimApp.HkTlm.TelemetryHeader));
    CFE_SB_TransmitMsg(CFE_MSG_PTR(ScSimApp.HkTlm.TelemetryHeader), true);

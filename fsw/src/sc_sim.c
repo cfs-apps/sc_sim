@@ -26,9 +26,6 @@
 **      but some checks will help especially in SC_SIM_Execute() and
 **      SIM_ExecuteEventCmd().
 **
-** References:
-**   1. cFS Basecamp Object-based Application Developers Guide.
-**   2. cFS Application Developer's Guide.
 */
 
 /*
@@ -274,13 +271,14 @@ void SC_SIM_Constructor(SC_SIM_Class_t *ScSimPtr, INITBL_Class_t *IniTbl,
 
    CFE_PSP_MemSet((void*)ScSim, 0, sizeof(SC_SIM_Class_t));
 
-   SC_SIM_TBL_Constructor(&ScSim->Tbl, SIM_AcceptNewTbl, INITBL_GetStrConfig(IniTbl, CFG_APP_CFE_NAME));
-   TBLMGR_RegisterTblWithDef(TblMgr, SC_SIM_TBL_LoadCmd, SC_SIM_TBL_DumpCmd, INITBL_GetStrConfig(IniTbl, CFG_SC_SIM_TBL_LOAD_FILE));
+   SC_SIM_TBL_Constructor(&ScSim->Tbl, SIM_AcceptNewTbl);
+   TBLMGR_RegisterTblWithDef(TblMgr, SC_SIM_TBL_NAME, SC_SIM_TBL_LoadCmd, SC_SIM_TBL_DumpCmd, 
+                             INITBL_GetStrConfig(IniTbl, CFG_SC_SIM_TBL_LOAD_FILE));
 
    ScSim->Time.Seconds = SC_SIM_IDLE_TIME;
    ScSim->Phase        = SC_SIM_Phase_IDLE;
-   ScSim->LastEventCmd   = &SimIdleCmd;
-   ScSim->NextEventCmd   = &SimIdleCmd;
+   ScSim->LastEventCmd = &SimIdleCmd;
+   ScSim->NextEventCmd = &SimIdleCmd;
    
    ADCS_Init(ADCS);
    CDH_Init(CDH);
@@ -480,7 +478,7 @@ bool SC_SIM_ProcessMqttJsonCmd(void *DataObjPtr, const CFE_MSG_Message_t *MsgPtr
 {
 
    bool RetStatus = true;
-   const SC_SIM_MqttJsonCmd_Payload_t *MqttJsonCmd = CMDMGR_PAYLOAD_PTR(MsgPtr,SC_SIM_MqttJsonCmd_t);
+   const SC_SIM_MqttJsonCmd_CmdPayload_t *MqttJsonCmd = CMDMGR_PAYLOAD_PTR(MsgPtr,SC_SIM_MqttJsonCmd_t);
    SC_SIM_StartSim_t StartSimCmd;
   
    CFE_EVS_SendEvent(SC_SIM_PROCESS_MQTT_CMD_EID, CFE_EVS_EventType_INFORMATION,
@@ -522,7 +520,7 @@ bool SC_SIM_ProcessMqttJsonCmd(void *DataObjPtr, const CFE_MSG_Message_t *MsgPtr
 void SC_SIM_ResetStatus(void)
 {
 
-   /* No counters to be reset that wouldn't effect the simulation state */
+   ScSim->Count = 0;
    SC_SIM_TBL_ResetStatus();
 
 } /* End SC_SIM_ResetStatus() */
@@ -542,28 +540,8 @@ bool SC_SIM_StartSimCmd(void *DataObjPtr, const CFE_MSG_Message_t *MsgPtr)
    bool SimEndCmdFound = false;
    bool RetStatus = true;
    
-   const SC_SIM_StartSim_Payload_t *StartSim = CMDMGR_PAYLOAD_PTR(MsgPtr,SC_SIM_StartSim_t);
+   const SC_SIM_StartSim_CmdPayload_t *StartSim = CMDMGR_PAYLOAD_PTR(MsgPtr,SC_SIM_StartSim_t);
    
-   SIM_SetTime(SC_SIM_INIT_TIME);
-   ScSim->Active = true;
-   ScSim->Phase  = SC_SIM_Phase_INIT;
-   
-   /* 
-   ** Only allow first sim set time to generated an event message and then disable time
-   ** events. 
-   */
-   strcpy(CfeDisAppEventsCmd.Payload.AppName,"CFE_SB");
-   CFE_MSG_GenerateChecksum(CFE_MSG_PTR(CfeDisAppEventsCmd.CommandBase));
-   CFE_SB_TransmitMsg(CFE_MSG_PTR(CfeDisAppEventsCmd.CommandBase), true);
-
-   strcpy(CfeDisAppEventsCmd.Payload.AppName,"CFE_TIME");
-   CFE_MSG_GenerateChecksum(CFE_MSG_PTR(CfeDisAppEventsCmd.CommandBase));
-   CFE_SB_TransmitMsg(CFE_MSG_PTR(CfeDisAppEventsCmd.CommandBase), true);
-   
-   strcpy(CfeDisAppEventsCmd.Payload.AppName,"KIT_SCH");
-   CFE_MSG_GenerateChecksum(CFE_MSG_PTR(CfeDisAppEventsCmd.CommandBase));
-   CFE_SB_TransmitMsg(CFE_MSG_PTR(CfeDisAppEventsCmd.CommandBase), true);
-
    if (StartSim->ScenarioId == SC_SIM_Scenario_GND_CONTACT_1)
    {
       ScSim->Scenario = SimScenario1;
@@ -580,8 +558,31 @@ bool SC_SIM_StartSimCmd(void *DataObjPtr, const CFE_MSG_Message_t *MsgPtr)
       RetStatus = false;
    }
 
+
    if (RetStatus == true)
    {   
+
+      SIM_SetTime(SC_SIM_INIT_TIME);
+      ScSim->Active = true;
+      ScSim->Phase  = SC_SIM_Phase_INIT;
+      ScSim->Count++;
+      
+      /* 
+      ** Only allow first sim set time to generated an event message and then disable time
+      ** events. 
+      */
+      strcpy(CfeDisAppEventsCmd.Payload.AppName,"CFE_SB");
+      CFE_MSG_GenerateChecksum(CFE_MSG_PTR(CfeDisAppEventsCmd.CommandBase));
+      CFE_SB_TransmitMsg(CFE_MSG_PTR(CfeDisAppEventsCmd.CommandBase), true);
+
+      strcpy(CfeDisAppEventsCmd.Payload.AppName,"CFE_TIME");
+      CFE_MSG_GenerateChecksum(CFE_MSG_PTR(CfeDisAppEventsCmd.CommandBase));
+      CFE_SB_TransmitMsg(CFE_MSG_PTR(CfeDisAppEventsCmd.CommandBase), true);
+      
+      strcpy(CfeDisAppEventsCmd.Payload.AppName,"KIT_SCH");
+      CFE_MSG_GenerateChecksum(CFE_MSG_PTR(CfeDisAppEventsCmd.CommandBase));
+      CFE_SB_TransmitMsg(CFE_MSG_PTR(CfeDisAppEventsCmd.CommandBase), true);
+
       ScSim->ScenarioId   = StartSim->ScenarioId;
       ScSim->LastEventCmd = &SimIdleCmd;
       ScSim->NextEventCmd = &ScSim->Scenario[0];
@@ -636,6 +637,7 @@ bool SC_SIM_StartSimCmd(void *DataObjPtr, const CFE_MSG_Message_t *MsgPtr)
          } /* End if !SimEndCmdFound */
       } /* End scenario loop */
 
+      
       CFE_EVS_SendEvent(SC_SIM_START_SIM_EID, CFE_EVS_EventType_INFORMATION,
                         "Start Simulation using scenario %d with %d available runtime cmd entries starting at index %d",
                         StartSim->ScenarioId, (SC_SIM_EVT_CMD_MAX-ScSim->RunTimeCmdIdx), ScSim->RunTimeCmdIdx);
@@ -737,6 +739,7 @@ static void SC_SIM_SendMgmtPkt(void)
    Payload->SimTime   = ScSim->Time.Seconds;
    Payload->SimActive = ScSim->Active;
    Payload->SimPhase  = ScSim->Phase;
+   Payload->SimCount  = ScSim->Count;
    
    Payload->ContactTimePending   = ScSim->Comm.Contact.TimePending;
    Payload->ContactLength        = ScSim->Comm.Contact.Length;   

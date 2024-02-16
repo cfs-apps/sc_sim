@@ -15,10 +15,6 @@
 ** Notes:
 **   None
 **
-** References:
-**   1. cFS Basecamp Object-based Application Developer's Guide.
-**   2. cFS Application Developer's Guide.
-**
 */
 
 /*
@@ -86,8 +82,7 @@ static CJSON_Obj_t JsonTblObjs[] = {
 **
 */
 void SC_SIM_TBL_Constructor(SC_SIM_TBL_Class_t *ScSimTblPtr, 
-                            SC_SIM_TBL_LoadFunc_t LoadFunc,
-                            const char *AppName)
+                            SC_SIM_TBL_LoadFunc_t LoadFunc)
 {
 
    ScSimTbl = ScSimTblPtr;
@@ -95,7 +90,6 @@ void SC_SIM_TBL_Constructor(SC_SIM_TBL_Class_t *ScSimTblPtr,
    CFE_PSP_MemSet(ScSimTbl, 0, sizeof(SC_SIM_TBL_Class_t));
  
    ScSimTbl->LoadFunc = LoadFunc;
-   ScSimTbl->AppName  = AppName;
    ScSimTbl->JsonObjCnt = (sizeof(JsonTblObjs)/sizeof(CJSON_Obj_t));
          
 } /* End SC_SIM_TBL_Constructor() */
@@ -106,73 +100,39 @@ void SC_SIM_TBL_Constructor(SC_SIM_TBL_Class_t *ScSimTblPtr,
 **
 ** Notes:
 **  1. Function signature must match TBLMGR_DumpTblFuncPtr_t.
-**  2. Can assume valid table filename because this is a callback from 
-**     the app framework table manager that has verified the file.
-**  3. DumpType is unused.
-**  4. File is formatted so it can be used as a load file. It does not follow
-**     the cFE table file format. 
-**  5. Creates a new dump file, overwriting anything that may have existed
-**     previously
+**  2. File is formatted so it can be used as a load file.
 */
-bool SC_SIM_TBL_DumpCmd(TBLMGR_Tbl_t *Tbl, uint8 DumpType, const char *Filename)
+bool SC_SIM_TBL_DumpCmd(osal_id_t FileHandle)
 {
 
-   bool       RetStatus = false;
-   int32      SysStatus;
-   osal_id_t  FileHandle;
-   os_err_name_t OsErrStr;
    char DumpRecord[256];
-   char SysTimeStr[128];
 
+   sprintf(DumpRecord,"   \"adcs\": {\n   \"tbd-1\": %d,\n   \"tbd-2\": %d\n   },\n", 
+           ScSimTbl->Data.Adcs.Tbd1, ScSimTbl->Data.Adcs.Tbd2);
+   OS_write(FileHandle,DumpRecord,strlen(DumpRecord));
    
-   SysStatus = OS_OpenCreate(&FileHandle, Filename, OS_FILE_FLAG_CREATE, OS_READ_WRITE);
-
-   if (SysStatus == OS_SUCCESS)
-   {
- 
-      sprintf(DumpRecord,"{\n   \"app-name\": \"%s\",\n   \"tbl-name\": \"SC_SIM\",\n", ScSimTbl->AppName);
-      OS_write(FileHandle, DumpRecord, strlen(DumpRecord));
-
-      CFE_TIME_Print(SysTimeStr, CFE_TIME_GetTime());
-      sprintf(DumpRecord,"   \"description\": \"Table dumped at %s\",\n",SysTimeStr);
-      OS_write(FileHandle, DumpRecord, strlen(DumpRecord));
-
-      sprintf(DumpRecord,"   \"adcs\": {\n   \"tbd-1\": %d,\n   \"tbd-2\": %d\n   },\n", 
-              ScSimTbl->Data.Adcs.Tbd1, ScSimTbl->Data.Adcs.Tbd2);
-      
-      sprintf(DumpRecord,"   \"cdh\": {\n   \"tbd-1\": %d,\n   \"tbd-2\": %d\n   },\n", 
-              ScSimTbl->Data.Cdh.Tbd1, ScSimTbl->Data.Cdh.Tbd2);
-      
-      sprintf(DumpRecord,"   \"comm\": {\n   \"tbd-1\": %d,\n   \"tbd-2\": %d\n   },\n", 
-              ScSimTbl->Data.Comm.Tbd1, ScSimTbl->Data.Comm.Tbd2);
-      
-      sprintf(DumpRecord,"   \"fsw\": {\n   \"tbd-1\": %d,\n   \"tbd-2\": %d\n   },\n", 
-              ScSimTbl->Data.Fsw.Tbd1, ScSimTbl->Data.Fsw.Tbd2);
-      
-      sprintf(DumpRecord,"   \"power\": {\n   \"tbd-1\": %d,\n   \"tbd-2\": %d\n   },\n", 
-              ScSimTbl->Data.Power.Tbd1, ScSimTbl->Data.Power.Tbd2);
-      
-      sprintf(DumpRecord,"   \"therm\": {\n   \"tbd-1\": %d,\n   \"tbd-2\": %d\n   }\n}", 
-              ScSimTbl->Data.Therm.Tbd1, ScSimTbl->Data.Therm.Tbd2);
-      
-      OS_close(FileHandle);
-
-      CFE_EVS_SendEvent(SC_SIM_TBL_DUMP_EID, CFE_EVS_EventType_DEBUG,
-                        "Successfully created dump file %s", Filename);
-
-      RetStatus = true;
-
-   } /* End if file create */
-   else
-   {
-      OS_GetErrorName(SysStatus, &OsErrStr);
-      CFE_EVS_SendEvent(SC_SIM_TBL_DUMP_EID, CFE_EVS_EventType_ERROR,
-                        "Error creating dump file '%s', status=%s",
-                        Filename, OsErrStr);
+   sprintf(DumpRecord,"   \"cdh\": {\n   \"tbd-1\": %d,\n   \"tbd-2\": %d\n   },\n", 
+           ScSimTbl->Data.Cdh.Tbd1, ScSimTbl->Data.Cdh.Tbd2);
+   OS_write(FileHandle,DumpRecord,strlen(DumpRecord));
    
-   } /* End if file create error */
+   sprintf(DumpRecord,"   \"comm\": {\n   \"tbd-1\": %d,\n   \"tbd-2\": %d\n   },\n", 
+           ScSimTbl->Data.Comm.Tbd1, ScSimTbl->Data.Comm.Tbd2);
+   OS_write(FileHandle,DumpRecord,strlen(DumpRecord));
+   
+   sprintf(DumpRecord,"   \"fsw\": {\n   \"tbd-1\": %d,\n   \"tbd-2\": %d\n   },\n", 
+           ScSimTbl->Data.Fsw.Tbd1, ScSimTbl->Data.Fsw.Tbd2);
+   OS_write(FileHandle,DumpRecord,strlen(DumpRecord));
+   
+   sprintf(DumpRecord,"   \"power\": {\n   \"tbd-1\": %d,\n   \"tbd-2\": %d\n   },\n", 
+           ScSimTbl->Data.Power.Tbd1, ScSimTbl->Data.Power.Tbd2);
+   OS_write(FileHandle,DumpRecord,strlen(DumpRecord));
+   
+   sprintf(DumpRecord,"   \"therm\": {\n   \"tbd-1\": %d,\n   \"tbd-2\": %d\n   }\n", 
+           ScSimTbl->Data.Therm.Tbd1, ScSimTbl->Data.Therm.Tbd2);
+   OS_write(FileHandle,DumpRecord,strlen(DumpRecord));
+      
 
-   return RetStatus;
+   return true;
    
 } /* End of SC_SIM_TBL_DumpCmd() */
 
@@ -183,7 +143,7 @@ bool SC_SIM_TBL_DumpCmd(TBLMGR_Tbl_t *Tbl, uint8 DumpType, const char *Filename)
 ** Notes:
 **  1. Function signature must match TBLMGR_LoadTblFuncPtr_t.
 */
-bool SC_SIM_TBL_LoadCmd(TBLMGR_Tbl_t *Tbl, uint8 LoadType, const char *Filename)
+bool SC_SIM_TBL_LoadCmd(APP_C_FW_TblLoadOptions_Enum_t LoadType, const char *Filename)
 {
 
    bool  RetStatus = false;
@@ -191,13 +151,8 @@ bool SC_SIM_TBL_LoadCmd(TBLMGR_Tbl_t *Tbl, uint8 LoadType, const char *Filename)
    if (CJSON_ProcessFile(Filename, ScSimTbl->JsonBuf, SC_SIM_TBL_JSON_FILE_MAX_CHAR, LoadJsonData))
    {
       ScSimTbl->Loaded = true;
-      ScSimTbl->LastLoadStatus = TBLMGR_STATUS_VALID;
       if (ScSimTbl->LoadFunc != NULL) (ScSimTbl->LoadFunc)();
       RetStatus = true;   
-   }
-   else
-   {
-      ScSimTbl->LastLoadStatus = TBLMGR_STATUS_INVALID;
    }
 
    return RetStatus;
@@ -212,7 +167,6 @@ bool SC_SIM_TBL_LoadCmd(TBLMGR_Tbl_t *Tbl, uint8 LoadType, const char *Filename)
 void SC_SIM_TBL_ResetStatus(void)
 {
 
-   ScSimTbl->LastLoadStatus = TBLMGR_STATUS_UNDEF;
    ScSimTbl->LastLoadCnt = 0;
  
 } /* End SC_SIM_TBL_ResetStatus() */

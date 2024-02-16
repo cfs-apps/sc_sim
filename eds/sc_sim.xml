@@ -30,13 +30,6 @@
       <!--**** DataTypeSet:  Entry Types ****-->
       <!--***********************************-->
  
-      <EnumeratedDataType name="TblId" shortDescription="Identifies different app tables" >
-        <IntegerDataEncoding sizeInBits="8" encoding="unsigned" />
-        <EnumerationList>
-          <Enumeration label="SIM_PARAMETERS" value="0" shortDescription="Histogram bin definitions" />
-        </EnumerationList>
-      </EnumeratedDataType>
-
       <EnumeratedDataType name="Scenario" shortDescription="Define simulation scenario IDs. See sc_sim.c" >
         <IntegerDataEncoding sizeInBits="16" encoding="unsigned" />
         <EnumerationList>
@@ -112,11 +105,18 @@
         </EnumerationList>
       </EnumeratedDataType>
 
+      <EnumeratedDataType name="TblId" shortDescription="Table Identifiers. See app_c_fw.xml guidelines" >
+        <IntegerDataEncoding sizeInBits="16" encoding="unsigned" />
+        <EnumerationList>
+          <Enumeration label="SIM_PARAMETERS" value="0" shortDescription="Histogram bin definitions" />
+        </EnumerationList>
+      </EnumeratedDataType>
+      
       <!--***************************************-->
       <!--**** DataTypeSet: Command Payloads ****-->
       <!--***************************************-->
 
-      <ContainerDataType name="LoadTbl_Payload" shortDescription="Load an app's JSON table">
+      <ContainerDataType name="LoadTbl_CmdPayload" shortDescription="Load an app's JSON table">
         <EntryList>
           <Entry name="Id"       type="TblId"                   shortDescription="Table identifier" />
           <Entry name="Type"     type="APP_C_FW/TblLoadOptions" shortDescription="Replace entire table or perform sparse entry updates" />
@@ -124,21 +124,20 @@
        </EntryList>
       </ContainerDataType>
       
-      <ContainerDataType name="DumpTbl_Payload" shortDescription="Dump an app's JSON table">
+      <ContainerDataType name="DumpTbl_CmdPayload" shortDescription="Dump an app's JSON table">
         <EntryList>
           <Entry name="Id"       type="TblId"               shortDescription="Table identifier" />
-          <Entry name="Unused"   type="BASE_TYPES/uint8"    shortDescription="Unused" />
           <Entry name="Filename" type="BASE_TYPES/PathName" shortDescription="Full path and file name of table to be dumped" />
-       </EntryList>
+        </EntryList>
       </ContainerDataType>
 
-      <ContainerDataType name="StartSim_Payload" shortDescription="Start a predefined simulation scenario">
+      <ContainerDataType name="StartSim_CmdPayload" shortDescription="Start a predefined simulation scenario">
         <EntryList>
           <Entry name="ScenarioId"    type="Scenario"   shortDescription="See sc_sim.c for scenario definitions" />
        </EntryList>
       </ContainerDataType>
 
-      <ContainerDataType name="MqttJsonCmd_Payload" shortDescription="">
+      <ContainerDataType name="MqttJsonCmd_CmdPayload" shortDescription="">
         <EntryList>
           <Entry name="Id"  type="MqttJsonCmdId"  shortDescription="" />
        </EntryList>
@@ -153,10 +152,12 @@
           <Entry name="ValidCmdCnt"    type="BASE_TYPES/uint16"     />
           <Entry name="InvalidCmdCnt"  type="BASE_TYPES/uint16"     />
           <Entry name="LastTblAction"  type="APP_C_FW/TblActions"   />
+          <Entry name="LastTblActionStatus" type="APP_C_FW/TblActionStatus" />
           <Entry name="SimTblLoaded"   type="APP_C_FW/BooleanUint8" />
           <Entry name="SimActive"      type="APP_C_FW/BooleanUint8" />
           <Entry name="SimPhase"       type="BASE_TYPES/uint8"      />
           <Entry name="SimTime"        type="BASE_TYPES/uint32"     />
+          <Entry name="SimCount"       type="BASE_TYPES/uint32"     />
         </EntryList>
       </ContainerDataType>
 
@@ -173,6 +174,7 @@
           <Entry name="SimTime"   type="BASE_TYPES/uint32"     />
           <Entry name="SimActive" type="APP_C_FW/BooleanUint8" />
           <Entry name="SimPhase"  type="BASE_TYPES/uint8"      />
+          <Entry name="SimCount"  type="BASE_TYPES/uint32"     />
    
          <!-- Contact info is in both the management tlm and model telemetry -->
   
@@ -255,7 +257,7 @@
           <ValueConstraint entry="Sec.FunctionCode" value="${APP_C_FW/LOAD_TBL_CC}" />
         </ConstraintSet>
         <EntryList>
-          <Entry type="LoadTbl_Payload" name="Payload" />
+          <Entry type="LoadTbl_CmdPayload" name="Payload" />
         </EntryList>
       </ContainerDataType>
 
@@ -264,7 +266,7 @@
           <ValueConstraint entry="Sec.FunctionCode" value="${APP_C_FW/DUMP_TBL_CC}" />
         </ConstraintSet>
         <EntryList>
-          <Entry type="DumpTbl_Payload" name="Payload" />
+          <Entry type="DumpTbl_CmdPayload" name="Payload" />
         </EntryList>
       </ContainerDataType>
 
@@ -273,7 +275,7 @@
           <ValueConstraint entry="Sec.FunctionCode" value="${APP_C_FW/APP_BASE_CC} + 0" />
         </ConstraintSet>
         <EntryList>
-          <Entry type="StartSim_Payload" name="Payload" />
+          <Entry type="StartSim_CmdPayload" name="Payload" />
         </EntryList>
       </ContainerDataType>
       
@@ -300,7 +302,7 @@
           <ValueConstraint entry="Sec.FunctionCode" value="${APP_C_FW/APP_BASE_CC} + 4" />
         </ConstraintSet>
         <EntryList>
-          <Entry type="MqttJsonCmd_Payload" name="Payload" />
+          <Entry type="MqttJsonCmd_CmdPayload" name="Payload" />
         </EntryList>
       </ContainerDataType>
 

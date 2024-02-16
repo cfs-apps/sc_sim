@@ -21,9 +21,6 @@
 **      are tailored for its needs.
 **   2. The JSON payload format is defined in the .c file.
 **
-** References:
-**   1. cFS Basecamp Object-based Application Developer's Guide
-**
 */
 
 #ifndef _sc_sim_mqtt_topic_event_msg_

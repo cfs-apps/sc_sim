@@ -20,10 +20,6 @@
 **   2. "SC_SIM" is included in event messages to identify the app
 **      supplying the plugin. The event messages are reported by
 **      MQTT_GW.
-
-**
-** References:
-**   1. cFS Basecamp Object-based Application Developer's Guide
 **
 */
 
@@ -49,7 +45,7 @@ static void SbMsgTest(bool Init, int16 Param);
 
 static SC_SIM_MQTT_TOPIC_CMD_Class_t *MqttTopicCmd = NULL;
 
-static SC_SIM_MqttJsonCmd_Payload_t MqttJsonCmd; /* Working buffer for loads */
+static SC_SIM_MqttJsonCmd_CmdPayload_t MqttJsonCmd; /* Working buffer for loads */
 
 /*
 ** basecamp/sc_sim/cmd payload: 
@@ -118,7 +114,7 @@ static bool CfeToJson(const char **JsonMsgPayload, const CFE_MSG_Message_t *CfeM
 
    bool  RetStatus = false;
    int   PayloadLen; 
-   const SC_SIM_MqttJsonCmd_Payload_t *MqttJsonCmdMsg = CMDMGR_PAYLOAD_PTR(CfeMsg, SC_SIM_MqttJsonCmd_t);
+   const SC_SIM_MqttJsonCmd_CmdPayload_t *MqttJsonCmdMsg = CMDMGR_PAYLOAD_PTR(CfeMsg, SC_SIM_MqttJsonCmd_t);
 
    *JsonMsgPayload = NullMqttJsonCmd;
    
@@ -182,12 +178,12 @@ static bool JsonToCfe(CFE_MSG_Message_t **CfeMsg, const char *JsonMsgPayload, ui
 static void SbMsgTest(bool Init, int16 Param)
 {
 
-   SC_SIM_MqttJsonCmd_Payload_t *CmdPayload = &MqttTopicCmd->MqttJsonCmd.Payload;
+   SC_SIM_MqttJsonCmd_CmdPayload_t *CmdPayload = &MqttTopicCmd->MqttJsonCmd.Payload;
 
    if (Init)
    {
       
-      memset(CmdPayload, 0, sizeof(SC_SIM_MqttJsonCmd_Payload_t));
+      memset(CmdPayload, 0, sizeof(SC_SIM_MqttJsonCmd_CmdPayload_t));
 
       CmdPayload->Id = 0;
 
@@ -218,7 +214,7 @@ static bool LoadJsonData(const char *JsonMsgPayload, uint16 PayloadLen)
    bool      RetStatus = false;
    size_t    ObjLoadCnt;
 
-   memset(&MqttJsonCmd, 0, sizeof(SC_SIM_MqttJsonCmd_Payload_t));
+   memset(&MqttJsonCmd, 0, sizeof(SC_SIM_MqttJsonCmd_CmdPayload_t));
    ObjLoadCnt = CJSON_LoadObjArray(JsonTblObjs, MqttTopicCmd->JsonObjCnt, 
                                    JsonMsgPayload, PayloadLen);
    CFE_EVS_SendEvent(SC_SIM_MQTT_TOPIC_CMD_LOAD_JSON_DATA_EID, CFE_EVS_EventType_DEBUG,
@@ -226,7 +222,7 @@ static bool LoadJsonData(const char *JsonMsgPayload, uint16 PayloadLen)
 
    if (ObjLoadCnt == MqttTopicCmd->JsonObjCnt)
    {
-      memcpy(&MqttTopicCmd->MqttJsonCmd.Payload, &MqttJsonCmd, sizeof(SC_SIM_MqttJsonCmd_Payload_t));      
+      memcpy(&MqttTopicCmd->MqttJsonCmd.Payload, &MqttJsonCmd, sizeof(SC_SIM_MqttJsonCmd_CmdPayload_t));      
       RetStatus = true;
    }
    else

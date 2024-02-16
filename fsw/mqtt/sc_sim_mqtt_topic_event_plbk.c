@@ -21,9 +21,6 @@
 **      supplying the plugin. The event messages are reported by
 **      MQTT_GW.
 **
-** References:
-**   1. cFS Basecamp Object-based Application Developer's Guide
-**
 */
 
 /*

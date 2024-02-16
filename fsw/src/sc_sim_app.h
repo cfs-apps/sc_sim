@@ -17,10 +17,6 @@
 ** Notes:
 **   None
 **
-** References:
-**   1. cFS Basecamp Object-based Application Developer's Guide.
-**   2. cFS Application Developer's Guide.
-**
 */
 #ifndef _sc_sim_app_
 #define _sc_sim_app_

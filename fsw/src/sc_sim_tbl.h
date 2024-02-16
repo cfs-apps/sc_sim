@@ -19,10 +19,6 @@
 **      is passed to the constructor and saved for all other operations.
 **      This is a table-specific file so it doesn't need to be re-entrant.
 **
-** References:
-**   1. cFS Basecamp Object-based Application Developer's Guide.
-**   2. cFS Application Developer's Guide.
-**
 */
 #ifndef _sc_sim_tbl_
 #define _sc_sim_tbl_
@@ -138,9 +134,7 @@ typedef struct
    ** Standard CJSON table data
    */
    
-   const char*  AppName;
    bool         Loaded;   /* Has entire table been loaded? */
-   uint8        LastLoadStatus;
    uint16       LastLoadCnt;
    
    size_t       JsonObjCnt;
@@ -167,8 +161,7 @@ typedef struct
 **
 */
 void SC_SIM_TBL_Constructor(SC_SIM_TBL_Class_t *ScSimTblPtr, 
-                            SC_SIM_TBL_LoadFunc_t LoadFunc,
-                            const char *AppName);
+                            SC_SIM_TBL_LoadFunc_t LoadFunc);
 
 
 /******************************************************************************
@@ -178,11 +171,9 @@ void SC_SIM_TBL_Constructor(SC_SIM_TBL_Class_t *ScSimTblPtr,
 **
 ** Notes:
 **  1. Function signature must match TBLMGR_DumpTblFuncPtr_t.
-**  2. Can assume valid table file name because this is a callback from 
-**     the app framework table manager.
 **
 */
-bool SC_SIM_TBL_DumpCmd(TBLMGR_Tbl_t *Tbl, uint8 DumpType, const char *Filename);
+bool SC_SIM_TBL_DumpCmd(osal_id_t FileHandle);
 
 
 /******************************************************************************
@@ -196,7 +187,7 @@ bool SC_SIM_TBL_DumpCmd(TBLMGR_Tbl_t *Tbl, uint8 DumpType, const char *Filename)
 **     the app framework table manager.
 **
 */
-bool SC_SIM_TBL_LoadCmd(TBLMGR_Tbl_t *Tbl, uint8 LoadType, const char *Filename);
+bool SC_SIM_TBL_LoadCmd(APP_C_FW_TblLoadOptions_Enum_t LoadType, const char *Filename);
 
 
 /******************************************************************************
