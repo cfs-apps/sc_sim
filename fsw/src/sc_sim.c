@@ -463,7 +463,7 @@ bool SC_SIM_Execute(void)
 
 
 /******************************************************************************
-** Functions: SC_SIM_ProcessMqttJsonCmd
+** Functions: SC_SIM_ProcessJMsgCmd
 **
 ** Process commands from an MQTT broker
 **
@@ -474,43 +474,43 @@ bool SC_SIM_Execute(void)
 **     environments so user choices are minimized. 
 **
 */
-bool SC_SIM_ProcessMqttJsonCmd(void *DataObjPtr, const CFE_MSG_Message_t *MsgPtr)
+bool SC_SIM_ProcessJMsgCmd(void *DataObjPtr, const CFE_MSG_Message_t *MsgPtr)
 {
 
    bool RetStatus = true;
-   const SC_SIM_MqttJsonCmd_CmdPayload_t *MqttJsonCmd = CMDMGR_PAYLOAD_PTR(MsgPtr,SC_SIM_MqttJsonCmd_t);
+   const SC_SIM_JMsgCmd_CmdPayload_t *JMsgCmd = CMDMGR_PAYLOAD_PTR(MsgPtr,SC_SIM_JMsgCmd_t);
    SC_SIM_StartSim_t StartSimCmd;
   
-   CFE_EVS_SendEvent(SC_SIM_PROCESS_MQTT_CMD_EID, CFE_EVS_EventType_INFORMATION,
-                     "SC_SIM_ProcessMqttJsonCmd() %d", MqttJsonCmd->Id);
+   CFE_EVS_SendEvent(SC_SIM_PROCESS_JMSG_CMD_EID, CFE_EVS_EventType_INFORMATION,
+                     "SC_SIM_ProcessJMsgCmd() %d", JMsgCmd->Id);
    
-   switch (MqttJsonCmd->Id)
+   switch (JMsgCmd->Id)
    {
-      case SC_SIM_MqttJsonCmdId_START_SIM_1:
+      case SC_SIM_JMsgCmdId_START_SIM_1:
          StartSimCmd.Payload.ScenarioId = SC_SIM_Scenario_GND_CONTACT_1;
          SC_SIM_StartSimCmd(DataObjPtr, CFE_MSG_PTR(StartSimCmd));
          break;
-      case SC_SIM_MqttJsonCmdId_START_SIM_2:
+      case SC_SIM_JMsgCmdId_START_SIM_2:
          StartSimCmd.Payload.ScenarioId = SC_SIM_Scenario_GND_CONTACT_2;
          SC_SIM_StartSimCmd(DataObjPtr, CFE_MSG_PTR(StartSimCmd));
          break;
-      case SC_SIM_MqttJsonCmdId_STOP_SIM:
+      case SC_SIM_JMsgCmdId_STOP_SIM:
          SC_SIM_StopSimCmd(DataObjPtr, NULL);
          break;
-      case SC_SIM_MqttJsonCmdId_START_EVT_PLBK:
+      case SC_SIM_JMsgCmdId_START_EVT_PLBK:
          SC_SIM_StartPlbkCmd(DataObjPtr, NULL);         
          break;
-      case SC_SIM_MqttJsonCmdId_STOP_EVT_PLBK:
+      case SC_SIM_JMsgCmdId_STOP_EVT_PLBK:
          SC_SIM_StopPlbkCmd(DataObjPtr, NULL);
          break;
       default:
-         CFE_EVS_SendEvent(SC_SIM_PROCESS_MQTT_CMD_EID, CFE_EVS_EventType_ERROR,
-                           "SC_SIM received invalid MQTT JSON command ID %d", MqttJsonCmd->Id);
+         CFE_EVS_SendEvent(SC_SIM_PROCESS_JMSG_CMD_EID, CFE_EVS_EventType_ERROR,
+                           "SC_SIM received invalid JMSG command ID %d", JMsgCmd->Id);
    }
    
    return RetStatus;
 
-} /* End SC_SIM_ProcessMqttJsonCmd() */
+} /* End SC_SIM_ProcessJMsgCmd() */
 
 
 /******************************************************************************

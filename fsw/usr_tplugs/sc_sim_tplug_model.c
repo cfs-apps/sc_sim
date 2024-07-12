@@ -13,13 +13,13 @@
 ** GNU Affero General Public License for more details.
 **
 ** Purpose:
-**   Manage SC_SIM Model telemetry topic
+**   Manage SC_SIM TPLUG Model
 **
 ** Notes:
 **   1. The JSON payload format is defined below.
 **   2. "SC_SIM" is included in event messages to identify the app
 **      supplying the plugin. The event messages are reported by
-**      MQTT_GW.
+**      the JMSG network app.
 **
 */
 
@@ -27,8 +27,60 @@
 ** Includes
 */
 
-#include "sc_sim_mqtt_topic_model.h"
+#include "lib_cfg.h"
+#include "sc_sim_tplug_model.h"
+#include "sc_sim_eds_typedefs.h"
 
+
+/***********************/
+/** Macro Definitions **/
+/***********************/
+
+/*
+** Event Message IDs
+*/
+
+#define BASE_EID  (JMSG_PLATFORM_TopicPluginBaseEid_USR_5)
+
+#define SC_SIM_TPLUG_MODEL_INIT_SB_MSG_TEST_EID  (BASE_EID + 0)
+#define SC_SIM_TPLUG_MODEL_SB_MSG_TEST_EID       (BASE_EID + 1)
+#define SC_SIM_TPLUG_MODEL_LOAD_JSON_DATA_EID    (BASE_EID + 2)
+#define SC_SIM_TPLUG_MODEL_JSON_TO_CCSDS_ERR_EID (BASE_EID + 3)
+       
+/**********************/
+/** Type Definitions **/
+/**********************/
+
+
+/******************************************************************************
+** Telemetry
+** 
+** SC_SIM_ModelTlm_t & SC_SIM_ModelTlm_Payload_t defined in EDS
+*/
+
+typedef struct
+{
+
+   /*
+   ** SC_SIM Model Telemetry
+   */
+   
+   CFE_SB_MsgId_t     TlmMsgId;
+   SC_SIM_ModelTlm_t  TlmMsg;
+   char               JsonMsgPayload[1024];
+
+   /*
+   ** Subset of the standard CJSON table data because this isn't using the
+   ** app_c_fw table manager service, but is using core-json in the same way
+   ** as an app_c_fw managed table.
+   */
+   size_t  JsonObjCnt;
+
+   uint32  CfeToJsonCnt;
+   uint32  JsonToCfeCnt;
+   
+   
+} SC_SIM_TPLUG_MODEL_Class_t;
 
 /************************************/
 /** Local File Function Prototypes **/
@@ -37,14 +89,14 @@
 static bool CfeToJson(const char **JsonMsgPayload, const CFE_MSG_Message_t *CfeMsg);
 static bool JsonToCfe(CFE_MSG_Message_t **CfeMsg, const char *JsonMsgPayload, uint16 PayloadLen);
 static bool LoadJsonData(const char *JsonMsgPayload, uint16 PayloadLen);
-static void SbMsgTest(bool Init, int16 Param);
+static void PluginTest(bool Init, int16 Param);
 
 
 /**********************/
 /** Global File Data **/
 /**********************/
 
-static SC_SIM_MQTT_TOPIC_MODEL_Class_t *MqttTopicModel = NULL;
+static SC_SIM_TPLUG_MODEL_Class_t TPlugModel;
 
 static SC_SIM_ModelTlm_Payload_t ScSimModel; /* Working buffer for loads */
 
@@ -119,40 +171,35 @@ static const char *NullScSimModelMsg = "{\"sim_time\": 0,\"sim_active\": 0,\"sim
       
 
 /******************************************************************************
-** Function: SC_SIM_MQTT_TOPIC_MODEL_Constructor
+** Function: SC_SIM_TPLUG_MODEL_Constructor
 **
-** Initialize the MQTT SC_SIM management topic
+** Initialize the SC_SIM MQTT Model topic
 **
 ** Notes:
 **   None
 **
 */
-void SC_SIM_MQTT_TOPIC_MODEL_Constructor(SC_SIM_MQTT_TOPIC_MODEL_Class_t *ScSimMqttTopicModelPtr,
-                                         MQTT_TOPIC_TBL_PluginFuncTbl_t *PluginFuncTbl,
-                                         CFE_SB_MsgId_t TlmMsgMid)
+void SC_SIM_TPLUG_MODEL_Constructor(JMSG_PLATFORM_TopicPlugin_Enum_t TopicPlugin)
 {
 
-   MqttTopicModel = ScSimMqttTopicModelPtr;
-   memset(MqttTopicModel, 0, sizeof(SC_SIM_MQTT_TOPIC_MODEL_Class_t));
+   memset(&TPlugModel, 0, sizeof(SC_SIM_TPLUG_MODEL_Class_t));
    
-   PluginFuncTbl->CfeToJson = CfeToJson;
-   PluginFuncTbl->JsonToCfe = JsonToCfe;  
-   PluginFuncTbl->SbMsgTest = SbMsgTest;
+   TPlugModel.JsonObjCnt = (sizeof(JsonTblObjs)/sizeof(CJSON_Obj_t));
    
-   MqttTopicModel->JsonObjCnt = (sizeof(JsonTblObjs)/sizeof(CJSON_Obj_t));
+   TPlugModel.TlmMsgId = JMSG_TOPIC_TBL_RegisterPlugin(TopicPlugin, CfeToJson, JsonToCfe, PluginTest);
    
-   CFE_MSG_Init(CFE_MSG_PTR(MqttTopicModel->TlmMsg), TlmMsgMid, sizeof(SC_SIM_ModelTlm_t));
+   CFE_MSG_Init(CFE_MSG_PTR(TPlugModel.TlmMsg), TPlugModel.TlmMsgId, sizeof(SC_SIM_ModelTlm_t));
       
-} /* End SC_SIM_MQTT_TOPIC_MODEL_Constructor() */
+} /* End SC_SIM_TPLUG_MODEL_Constructor() */
 
 
 /******************************************************************************
 ** Function: CfeToJson
 **
-** Convert a cFE SC_SIM Model message to a JSON topic message 
+** Convert a cFE SC_SIM TPLUG Model message to a JSON topic message 
 **
 ** Notes:
-**   1.  Signature must match MQTT_TOPIC_TBL_CfeToJson_t
+**   1.  Signature must match JMSG_TOPIC_TBL_CfeToJson_t
 */
 static bool CfeToJson(const char **JsonMsgPayload, const CFE_MSG_Message_t *CfeMsg)
 {
@@ -163,7 +210,7 @@ static bool CfeToJson(const char **JsonMsgPayload, const CFE_MSG_Message_t *CfeM
 
    *JsonMsgPayload = NullScSimModelMsg;
    
-   PayloadLen = sprintf(MqttTopicModel->JsonMsgPayload,
+   PayloadLen = sprintf(TPlugModel.JsonMsgPayload,
       "{\"adcs_eclipse\": %d, \"adcs_mode\": %d, \
       \"cdh_sbc_rst_cnt\": %d, \"cdh_hw_cmd_cnt\": %d, \"cdh_last_hw_cmd\": %d, \
       \"comm_in_contact\": %d, \"comm_contact_time_pending\": %d, \"comm_contact_time_consumed\": %d, \"comm_contact_time_remaining\": %d, \
@@ -183,8 +230,8 @@ static bool CfeToJson(const char **JsonMsgPayload, const CFE_MSG_Message_t *CfeM
 
    if (PayloadLen > 0)
    {
-      *JsonMsgPayload = MqttTopicModel->JsonMsgPayload;
-      MqttTopicModel->CfeToJsonCnt++;
+      *JsonMsgPayload = TPlugModel.JsonMsgPayload;
+      TPlugModel.CfeToJsonCnt++;
       RetStatus = true;
    }
    
@@ -199,7 +246,7 @@ static bool CfeToJson(const char **JsonMsgPayload, const CFE_MSG_Message_t *CfeM
 ** Convert a JSON SC_SIM Model topic message to a cFE message 
 **
 ** Notes:
-**   1.  Signature must match MQTT_TOPIC_TBL_JsonToCfe_t
+**   1.  Signature must match JMSG_TOPIC_TBL_JsonToCfe_t
 **
 */
 static bool JsonToCfe(CFE_MSG_Message_t **CfeMsg, const char *JsonMsgPayload, uint16 PayloadLen)
@@ -211,9 +258,9 @@ static bool JsonToCfe(CFE_MSG_Message_t **CfeMsg, const char *JsonMsgPayload, ui
    
    if (LoadJsonData(JsonMsgPayload, PayloadLen))
    {
-      *CfeMsg = (CFE_MSG_Message_t *)&MqttTopicModel->TlmMsg;
+      *CfeMsg = (CFE_MSG_Message_t *)&TPlugModel.TlmMsg;
 
-      ++MqttTopicModel->JsonToCfeCnt;
+      ++TPlugModel.JsonToCfeCnt;
       RetStatus = true;
    }
 
@@ -223,10 +270,10 @@ static bool JsonToCfe(CFE_MSG_Message_t **CfeMsg, const char *JsonMsgPayload, ui
 
 
 /******************************************************************************
-** Function: SbMsgTest
+** Function: PluginTest
 **
 ** Generate and send SB SC_SIM Model topic messages on SB that are read back
-** by MQTT_GW and cause MQTT messages to be generated from the SB messages.  
+** by JMSG network app and cause JMSGs to be generated from the SB messages.  
 **
 ** Notes:
 **   1. Param is unused.
@@ -234,10 +281,10 @@ static bool JsonToCfe(CFE_MSG_Message_t **CfeMsg, const char *JsonMsgPayload, ui
 **      correctly.
 **
 */
-static void SbMsgTest(bool Init, int16 Param)
+static void PluginTest(bool Init, int16 Param)
 {
 
-   SC_SIM_ModelTlm_Payload_t *TlmPayload = &MqttTopicModel->TlmMsg.Payload;
+   SC_SIM_ModelTlm_Payload_t *TlmPayload = &TPlugModel.TlmMsg.Payload;
 
    if (Init)
    {
@@ -268,8 +315,8 @@ static void SbMsgTest(bool Init, int16 Param)
       TlmPayload->Heater1Ena = false;
       TlmPayload->Heater2Ena = true;
 
-      CFE_EVS_SendEvent(SC_SIM_MQTT_TOPIC_MODEL_INIT_SB_MSG_TEST_EID, CFE_EVS_EventType_INFORMATION,
-                        "SC_SIM Model telemetry topic test started");
+      CFE_EVS_SendEvent(SC_SIM_TPLUG_MODEL_INIT_SB_MSG_TEST_EID, CFE_EVS_EventType_INFORMATION,
+                        "SC_SIM TPLUG Model telemetry topic test started");
    
    }
    else
@@ -280,10 +327,10 @@ static void SbMsgTest(bool Init, int16 Param)
       TlmPayload->ContactTimeRemaining--; 
    }
    
-   CFE_SB_TimeStampMsg(CFE_MSG_PTR(MqttTopicModel->TlmMsg.TelemetryHeader));
-   CFE_SB_TransmitMsg(CFE_MSG_PTR(MqttTopicModel->TlmMsg.TelemetryHeader), true);
+   CFE_SB_TimeStampMsg(CFE_MSG_PTR(TPlugModel.TlmMsg.TelemetryHeader));
+   CFE_SB_TransmitMsg(CFE_MSG_PTR(TPlugModel.TlmMsg.TelemetryHeader), true);
    
-} /* SbMsgTest() */
+} /* PluginTest() */
 
 
 /******************************************************************************
@@ -298,22 +345,22 @@ static bool LoadJsonData(const char *JsonMsgPayload, uint16 PayloadLen)
    bool      RetStatus = false;
    size_t    ObjLoadCnt;
 
-   memset(&MqttTopicModel->TlmMsg.Payload, 0, sizeof(SC_SIM_ModelTlm_Payload_t));
-   ObjLoadCnt = CJSON_LoadObjArray(JsonTblObjs, MqttTopicModel->JsonObjCnt, 
+   memset(&TPlugModel.TlmMsg.Payload, 0, sizeof(SC_SIM_ModelTlm_Payload_t));
+   ObjLoadCnt = CJSON_LoadObjArray(JsonTblObjs, TPlugModel.JsonObjCnt, 
                                    JsonMsgPayload, PayloadLen);
-   CFE_EVS_SendEvent(SC_SIM_MQTT_TOPIC_MODEL_LOAD_JSON_DATA_EID, CFE_EVS_EventType_DEBUG,
+   CFE_EVS_SendEvent(SC_SIM_TPLUG_MODEL_LOAD_JSON_DATA_EID, CFE_EVS_EventType_DEBUG,
                      "SC_SIM MQTT LoadJsonData() processed %d JSON objects", (uint16)ObjLoadCnt);
 
-   if (ObjLoadCnt == MqttTopicModel->JsonObjCnt)
+   if (ObjLoadCnt == TPlugModel.JsonObjCnt)
    {
-      memcpy(&MqttTopicModel->TlmMsg.Payload, &ScSimModel, sizeof(SC_SIM_ModelTlm_Payload_t));      
+      memcpy(&TPlugModel.TlmMsg.Payload, &ScSimModel, sizeof(SC_SIM_ModelTlm_Payload_t));      
       RetStatus = true;
    }
    else
    {
-      CFE_EVS_SendEvent(SC_SIM_MQTT_TOPIC_MODEL_JSON_TO_CCSDS_ERR_EID, CFE_EVS_EventType_ERROR, 
+      CFE_EVS_SendEvent(SC_SIM_TPLUG_MODEL_JSON_TO_CCSDS_ERR_EID, CFE_EVS_EventType_ERROR, 
                         "Error processing SC_SIM model message, payload contained %d of %d data objects",
-                        (unsigned int)ObjLoadCnt, (unsigned int)MqttTopicModel->JsonObjCnt);
+                        (unsigned int)ObjLoadCnt, (unsigned int)TPlugModel.JsonObjCnt);
    }
    
    return RetStatus;

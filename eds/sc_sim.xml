@@ -94,7 +94,7 @@
         </EntryList>
       </ContainerDataType>
 
-      <EnumeratedDataType name="MqttJsonCmdId" shortDescription="Identify command received in an MQTT message" >
+      <EnumeratedDataType name="JMsgCmdId" shortDescription="Identify command received in an MQTT message" >
         <IntegerDataEncoding sizeInBits="16" encoding="unsigned" />
         <EnumerationList>
           <Enumeration label="START_SIM_1"    value="1" shortDescription="StartSim(GND_CONTACT_1)" />
@@ -137,9 +137,9 @@
        </EntryList>
       </ContainerDataType>
 
-      <ContainerDataType name="MqttJsonCmd_CmdPayload" shortDescription="">
+      <ContainerDataType name="JMsgCmd_CmdPayload" shortDescription="">
         <EntryList>
-          <Entry name="Id"  type="MqttJsonCmdId"  shortDescription="" />
+          <Entry name="Id"  type="JMsgCmdId"  shortDescription="" />
        </EntryList>
       </ContainerDataType>
 
@@ -297,12 +297,12 @@
         </ConstraintSet>
       </ContainerDataType>
 
-      <ContainerDataType name="MqttJsonCmd" baseType="CommandBase" shortDescription="">
+      <ContainerDataType name="JMsgCmd" baseType="CommandBase" shortDescription="">
         <ConstraintSet>
           <ValueConstraint entry="Sec.FunctionCode" value="${APP_C_FW/APP_BASE_CC} + 4" />
         </ConstraintSet>
         <EntryList>
-          <Entry type="MqttJsonCmd_CmdPayload" name="Payload" />
+          <Entry type="JMsgCmd_CmdPayload" name="Payload" />
         </EntryList>
       </ContainerDataType>
 

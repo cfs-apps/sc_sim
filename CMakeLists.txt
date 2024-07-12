@@ -12,5 +12,6 @@ include_directories(${app_c_fw_MISSION_DIR}/fsw/mission_inc)
 aux_source_directory(fsw/src APP_SRC_FILES)
 aux_source_directory(fsw/tables APP_TABLE_FILES)
 
+
 # Create the app module
 add_cfe_app(sc_sim ${APP_SRC_FILES})

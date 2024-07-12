@@ -1,22 +1,25 @@
+var client = null;
 function startConnect(){
 
-    clientID = "clientID - "+parseInt(Math.random() * 100);
+    clientID = "sc_sim-"+parseInt(Math.random() * 100);
 
     host = document.getElementById("host").value;   
     port = document.getElementById("port").value;  
 
-    document.getElementById("messages").innerHTML += "<span> Connecting to " + host + " on port " +port+"</span><br>";
-    document.getElementById("messages").innerHTML += "<span> Using the client Id " + clientID +" </span><br>";
-
+    log_str = "<span> Connecting to <b>" + host + "</b> on port <b>" +port+"</b> using client Id <b>"+clientID+"</b></span><br>";
+    document.getElementById("messages").innerHTML += log_str;
+    
     client = new Paho.MQTT.Client(host,Number(port),clientID);
 
     client.onConnectionLost = onConnectionLost;
     client.onMessageArrived = onMessageArrived;
 
     client.connect({
-        onSuccess: onConnect
+        onSuccess: onConnect,
+        onFailure: function (error) {
+            document.getElementById("messages").innerHTML += "<span> Connection failed: "+error.errorMessage+"</span><br>";
+        }
     });
-
 
 }
 
@@ -24,7 +27,7 @@ function startConnect(){
 function onConnect(){
     topic =  document.getElementById("topic_s").value;
 
-    document.getElementById("messages").innerHTML += "<span> Subscribing to topic "+topic + "</span><br>";
+    document.getElementById("messages").innerHTML += "<span> Subscribing to topic <b>"+topic+"</b></span><br>";
 
     client.subscribe(topic);
     client.subscribe("basecamp/sc_sim/mgmt");
@@ -121,7 +124,7 @@ function startDisconnect(){
 function publishMessage(){
    msg = document.getElementById("Message").value;
    topic = document.getElementById("topic_p").value;
-
+   document.getElementById("messages").innerHTML += "<span> Preparing "+topic+":"+msg+"</span><br>";
    Message = new Paho.MQTT.Message(msg);
    Message.destinationName = topic;
 

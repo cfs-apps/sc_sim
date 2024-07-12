@@ -9,7 +9,7 @@
    "description": [
       "Simulate a very simple spacecraft operational interface. This",
       "is not a dynamic simulator. It's a very rudimentary simulation",
-      "to expose people to a remote operational interface."
+      "to introduce people to a remote operational interface."
    ],
 
    "cfs": {
@@ -25,7 +25,7 @@
       "tables": ["sc_sim_ini.json","sc_sim_tbl.json"]
    },
 
-   "requires": ["app_c_fw"]
+   "requires": ["app_c_fw", "jmsg_lib", "jmsg_app"]
 
 }}
 

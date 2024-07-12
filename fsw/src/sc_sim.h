@@ -61,7 +61,7 @@
 #define SC_SIM_EVENT_ERR_EID        (SC_SIM_BASE_EID +  9)
 #define SC_SIM_EXECUTE_EID          (SC_SIM_BASE_EID + 10)
 #define SC_SIM_ACCEPT_NEW_TBL_EID   (SC_SIM_BASE_EID + 11)
-#define SC_SIM_PROCESS_MQTT_CMD_EID (SC_SIM_BASE_EID + 12)
+#define SC_SIM_PROCESS_JMSG_CMD_EID (SC_SIM_BASE_EID + 12)
 
 #define ADCS_ENTER_ECLIPSE_EID    (SC_SIM_BASE_EID + 20)
 #define ADCS_EXIT_ECLIPSE_EID     (SC_SIM_BASE_EID + 21)
@@ -605,7 +605,7 @@ bool SC_SIM_Execute(void);
 
 
 /******************************************************************************
-** Functions: SC_SIM_ProcessMqttJsonCmd
+** Functions: SC_SIM_ProcessJMsgCmd
 **
 ** Process commands from an MQTT broker
 **
@@ -616,7 +616,7 @@ bool SC_SIM_Execute(void);
 **     environments so user choices are minimized. 
 **
 */
-bool SC_SIM_ProcessMqttJsonCmd(void *DataObjPtr, const CFE_MSG_Message_t *MsgPtr);
+bool SC_SIM_ProcessJMsgCmd(void *DataObjPtr, const CFE_MSG_Message_t *MsgPtr);
 
 
 /******************************************************************************

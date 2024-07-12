@@ -13,13 +13,13 @@
 ** GNU Affero General Public License for more details.
 **
 ** Purpose:
-**   Manage SC_SIM Management telemetry topic
+**   Manage SC_SIM TPLUG Management
 **
 ** Notes:
 **   1. The JSON payload format is defined below.
 **   2. "SC_SIM" is included in event messages to identify the app
 **      supplying the plugin. The event messages are reported by
-**      MQTT_GW.
+**      the JMSG network app.
 **
 */
 
@@ -27,7 +27,62 @@
 ** Includes
 */
 
-#include "sc_sim_mqtt_topic_mgmt.h"
+#include "lib_cfg.h"
+#include "sc_sim_tplug_mgmt.h"
+#include "sc_sim_eds_typedefs.h"
+
+
+/***********************/
+/** Macro Definitions **/
+/***********************/
+
+/*
+** Event Message IDs
+*/
+
+#define BASE_EID  (JMSG_PLATFORM_TopicPluginBaseEid_USR_4)
+
+#define SC_SIM_TPLUG_MGMT_INIT_SB_MSG_TEST_EID  (BASE_EID + 0)
+#define SC_SIM_TPLUG_MGMT_SB_MSG_TEST_EID       (BASE_EID + 1)
+#define SC_SIM_TPLUG_MGMT_LOAD_JSON_DATA_EID    (BASE_EID + 2)
+#define SC_SIM_TPLUG_MGMT_JSON_TO_CCSDS_ERR_EID (BASE_EID + 3)
+
+
+/**********************/
+/** Type Definitions **/
+/**********************/
+
+
+/******************************************************************************
+** Telemetry
+** 
+** SC_SIM_MgmtTlm_t & SC_SIM_MgmtTlm_Payload_t defined in EDS
+*/
+
+typedef struct
+{
+
+   /*
+   ** SC_SIM Management Telemetry
+   */
+   
+   CFE_SB_MsgId_t    TlmMsgId;
+   SC_SIM_MgmtTlm_t  TlmMsg;
+   char              JsonMsgPayload[1024];
+
+   /*
+   ** Subset of the standard CJSON table data because this isn't using the
+   ** app_c_fw table manager service, but is using core-json in the same way
+   ** as an app_c_fw managed table.
+   */
+   size_t  JsonObjCnt;
+
+   uint32  CfeToJsonCnt;
+   uint32  JsonToCfeCnt;
+   
+   
+} SC_SIM_TPLUG_MGMT_Class_t;
+
 
 /************************************/
 /** Local File Function Prototypes **/
@@ -36,14 +91,14 @@
 static bool CfeToJson(const char **JsonMsgPayload, const CFE_MSG_Message_t *CfeMsg);
 static bool JsonToCfe(CFE_MSG_Message_t **CfeMsg, const char *JsonMsgPayload, uint16 PayloadLen);
 static bool LoadJsonData(const char *JsonMsgPayload, uint16 PayloadLen);
-static void SbMsgTest(bool Init, int16 Param);
+static void PluginTest(bool Init, int16 Param);
 
 
 /**********************/
 /** Global File Data **/
 /**********************/
 
-static SC_SIM_MQTT_TOPIC_MGMT_Class_t *MqttTopicMgmt = NULL;
+static SC_SIM_TPLUG_MGMT_Class_t TPlugMgmt;
 
 static SC_SIM_MgmtTlm_Payload_t ScSimMgmt; /* Working buffer for loads */
 
@@ -78,40 +133,36 @@ static CJSON_Obj_t JsonTblObjs[] =
 static const char *NullScSimMgmtMsg = "{\"sim_time\": 0,\"sim_active\": 0,\"sim_phase\": 0,\"contact_time_pending\": 0,\"contact_length\": 0,\"contact_time_consumed\": 0,\"contact_time_remaining\": 0}";
                
 /******************************************************************************
-** Function: SC_SIM_MQTT_TOPIC_MGMT_Constructor
+** Function: SC_SIM_TPLUG_MGMT_Constructor
 **
-** Initialize the MQTT SC_SIM management topic
+** Initialize the SC_SIM TPLUG Management topic
 **
 ** Notes:
 **   None
 **
 */
-void SC_SIM_MQTT_TOPIC_MGMT_Constructor(SC_SIM_MQTT_TOPIC_MGMT_Class_t *ScSimMqttTopicMgmtPtr,
-                                        MQTT_TOPIC_TBL_PluginFuncTbl_t *PluginFuncTbl,
-                                        CFE_SB_MsgId_t TlmMsgMid)
+void SC_SIM_TPLUG_MGMT_Constructor(JMSG_PLATFORM_TopicPlugin_Enum_t TopicPlugin)
 {
-OS_printf("SC_SIM_MQTT_TOPIC_MGMT_Constructor()\n");
-   MqttTopicMgmt = ScSimMqttTopicMgmtPtr;
-   memset(MqttTopicMgmt, 0, sizeof(SC_SIM_MQTT_TOPIC_MGMT_Class_t));
+OS_printf("SC_SIM_TPLUG_MGMT_Constructor()\n");
+
+   memset(&TPlugMgmt, 0, sizeof(SC_SIM_TPLUG_MGMT_Class_t));
+ 
+   TPlugMgmt.JsonObjCnt = (sizeof(JsonTblObjs)/sizeof(CJSON_Obj_t));
    
-   PluginFuncTbl->CfeToJson = CfeToJson;
-   PluginFuncTbl->JsonToCfe = JsonToCfe;  
-   PluginFuncTbl->SbMsgTest = SbMsgTest;
-   
-   MqttTopicMgmt->JsonObjCnt = (sizeof(JsonTblObjs)/sizeof(CJSON_Obj_t));
-   
-   CFE_MSG_Init(CFE_MSG_PTR(MqttTopicMgmt->TlmMsg), TlmMsgMid, sizeof(SC_SIM_MgmtTlm_t));
+   TPlugMgmt.TlmMsgId = JMSG_TOPIC_TBL_RegisterPlugin(TopicPlugin, CfeToJson, JsonToCfe, PluginTest);
+  
+   CFE_MSG_Init(CFE_MSG_PTR(TPlugMgmt.TlmMsg), TPlugMgmt.TlmMsgId, sizeof(SC_SIM_MgmtTlm_t));
       
-} /* End SC_SIM_MQTT_TOPIC_MGMT_Constructor() */
+} /* End SC_SIM_TPLUG_MGMT_Constructor() */
 
 
 /******************************************************************************
 ** Function: CfeToJson
 **
-** Convert a cFE SC_SIM management message to a JSON topic message 
+** Convert a cFE SC_SIM TPLUG management message to a JSON topic message 
 **
 ** Notes:
-**   1.  Signature must match MQTT_TOPIC_TBL_CfeToJson_t
+**   1.  Signature must match TPLUG_TBL_CfeToJson_t
 */
 static bool CfeToJson(const char **JsonMsgPayload, const CFE_MSG_Message_t *CfeMsg)
 {
@@ -122,7 +173,7 @@ static bool CfeToJson(const char **JsonMsgPayload, const CFE_MSG_Message_t *CfeM
 
    *JsonMsgPayload = NullScSimMgmtMsg;
    
-   PayloadLen = sprintf(MqttTopicMgmt->JsonMsgPayload,
+   PayloadLen = sprintf(TPlugMgmt.JsonMsgPayload,
                 "{\"sim_time\": %d,\"sim_active\": %d,\"sim_phase\": %d,\"contact_time_pending\": %d,\"contact_length\": %d,\"contact_time_consumed\": %d,\"contact_time_remaining\": %d}",
                 ScSimMgmtMsg->SimTime, ScSimMgmtMsg->SimActive, ScSimMgmtMsg->SimPhase,
                 ScSimMgmtMsg->ContactTimePending, ScSimMgmtMsg->ContactLength,
@@ -130,8 +181,8 @@ static bool CfeToJson(const char **JsonMsgPayload, const CFE_MSG_Message_t *CfeM
                 
    if (PayloadLen > 0)
    {
-      *JsonMsgPayload = MqttTopicMgmt->JsonMsgPayload;
-      MqttTopicMgmt->CfeToJsonCnt++;
+      *JsonMsgPayload = TPlugMgmt.JsonMsgPayload;
+      TPlugMgmt.CfeToJsonCnt++;
       RetStatus = true;
    }
    
@@ -146,7 +197,7 @@ static bool CfeToJson(const char **JsonMsgPayload, const CFE_MSG_Message_t *CfeM
 ** Convert a JSON SC_SIM Management topic message to a cFE message 
 **
 ** Notes:
-**   1.  Signature must match MQTT_TOPIC_TBL_JsonToCfe_t
+**   1.  Signature must match TPLUG_TBL_JsonToCfe_t
 */
 static bool JsonToCfe(CFE_MSG_Message_t **CfeMsg, const char *JsonMsgPayload, uint16 PayloadLen)
 {
@@ -157,9 +208,9 @@ static bool JsonToCfe(CFE_MSG_Message_t **CfeMsg, const char *JsonMsgPayload, ui
    
    if (LoadJsonData(JsonMsgPayload, PayloadLen))
    {
-      *CfeMsg = (CFE_MSG_Message_t *)&MqttTopicMgmt->TlmMsg;
+      *CfeMsg = (CFE_MSG_Message_t *)&TPlugMgmt.TlmMsg;
 
-      ++MqttTopicMgmt->JsonToCfeCnt;
+      ++TPlugMgmt.JsonToCfeCnt;
       RetStatus = true;
    }
 
@@ -169,10 +220,10 @@ static bool JsonToCfe(CFE_MSG_Message_t **CfeMsg, const char *JsonMsgPayload, ui
 
 
 /******************************************************************************
-** Function: SbMsgTest
+** Function: PluginTest
 **
 ** Generate and send SB SC_SIM Management topic messages on SB that are read back
-** by MQTT_GW and cause MQTT messages to be generated from the SB messages.  
+** by JMSG network app and cause JMSGs to be generated from the SB messages.  
 **
 ** Notes:
 **   1. Param is unused.
@@ -180,10 +231,10 @@ static bool JsonToCfe(CFE_MSG_Message_t **CfeMsg, const char *JsonMsgPayload, ui
 **      correctly.
 **
 */
-static void SbMsgTest(bool Init, int16 Param)
+static void PluginTest(bool Init, int16 Param)
 {
 
-   SC_SIM_MgmtTlm_Payload_t *TlmPayload = &MqttTopicMgmt->TlmMsg.Payload;
+   SC_SIM_MgmtTlm_Payload_t *TlmPayload = &TPlugMgmt.TlmMsg.Payload;
 
    if (Init)
    {
@@ -198,8 +249,8 @@ static void SbMsgTest(bool Init, int16 Param)
       TlmPayload->ContactTimeConsumed  = 300;
       TlmPayload->ContactTimeRemaining = 400;
 
-      CFE_EVS_SendEvent(SC_SIM_MQTT_TOPIC_MGMT_INIT_SB_MSG_TEST_EID, CFE_EVS_EventType_INFORMATION,
-                        "SC_SIM Management telemetry topic test started");
+      CFE_EVS_SendEvent(SC_SIM_TPLUG_MGMT_INIT_SB_MSG_TEST_EID, CFE_EVS_EventType_INFORMATION,
+                        "SC_SIM TPLUG Management telemetry topic test started");
    
    }
    else
@@ -207,10 +258,10 @@ static void SbMsgTest(bool Init, int16 Param)
       TlmPayload->SimTime++;   
    }
    
-   CFE_SB_TimeStampMsg(CFE_MSG_PTR(MqttTopicMgmt->TlmMsg.TelemetryHeader));
-   CFE_SB_TransmitMsg(CFE_MSG_PTR(MqttTopicMgmt->TlmMsg.TelemetryHeader), true);
+   CFE_SB_TimeStampMsg(CFE_MSG_PTR(TPlugMgmt.TlmMsg.TelemetryHeader));
+   CFE_SB_TransmitMsg(CFE_MSG_PTR(TPlugMgmt.TlmMsg.TelemetryHeader), true);
    
-} /* SbMsgTest() */
+} /* PluginTest() */
 
 
 /******************************************************************************
@@ -225,22 +276,22 @@ static bool LoadJsonData(const char *JsonMsgPayload, uint16 PayloadLen)
    bool      RetStatus = false;
    size_t    ObjLoadCnt;
 
-   memset(&MqttTopicMgmt->TlmMsg.Payload, 0, sizeof(SC_SIM_MgmtTlm_Payload_t));
-   ObjLoadCnt = CJSON_LoadObjArray(JsonTblObjs, MqttTopicMgmt->JsonObjCnt, 
+   memset(&TPlugMgmt.TlmMsg.Payload, 0, sizeof(SC_SIM_MgmtTlm_Payload_t));
+   ObjLoadCnt = CJSON_LoadObjArray(JsonTblObjs, TPlugMgmt.JsonObjCnt, 
                                    JsonMsgPayload, PayloadLen);
-   CFE_EVS_SendEvent(SC_SIM_MQTT_TOPIC_MGMT_LOAD_JSON_DATA_EID, CFE_EVS_EventType_DEBUG,
-                     "SC_SIM MQTT LoadJsonData() processed %d JSON objects", (uint16)ObjLoadCnt);
+   CFE_EVS_SendEvent(SC_SIM_TPLUG_MGMT_LOAD_JSON_DATA_EID, CFE_EVS_EventType_DEBUG,
+                     "SC_SIM TPLUG LoadJsonData() processed %d JSON objects", (uint16)ObjLoadCnt);
 
-   if (ObjLoadCnt == MqttTopicMgmt->JsonObjCnt)
+   if (ObjLoadCnt == TPlugMgmt.JsonObjCnt)
    {
-      memcpy(&MqttTopicMgmt->TlmMsg.Payload, &ScSimMgmt, sizeof(SC_SIM_MgmtTlm_Payload_t));      
+      memcpy(&TPlugMgmt.TlmMsg.Payload, &ScSimMgmt, sizeof(SC_SIM_MgmtTlm_Payload_t));      
       RetStatus = true;
    }
    else
    {
-      CFE_EVS_SendEvent(SC_SIM_MQTT_TOPIC_MGMT_JSON_TO_CCSDS_ERR_EID, CFE_EVS_EventType_ERROR, 
+      CFE_EVS_SendEvent(SC_SIM_TPLUG_MGMT_JSON_TO_CCSDS_ERR_EID, CFE_EVS_EventType_ERROR, 
                         "Error processing SC_SIM management message, payload contained %d of %d data objects",
-                        (unsigned int)ObjLoadCnt, (unsigned int)MqttTopicMgmt->JsonObjCnt);
+                        (unsigned int)ObjLoadCnt, (unsigned int)TPlugMgmt.JsonObjCnt);
    }
    
    return RetStatus;

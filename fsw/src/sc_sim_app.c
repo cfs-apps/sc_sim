@@ -188,7 +188,7 @@ static int32 InitApp(void)
       CMDMGR_RegisterFunc(CMDMGR_OBJ, SC_SIM_STOP_SIM_CC,       SC_SIM, SC_SIM_StopSimCmd,         0);
       CMDMGR_RegisterFunc(CMDMGR_OBJ, SC_SIM_START_PLAYBACK_CC, SC_SIM, SC_SIM_StartPlbkCmd,       0);
       CMDMGR_RegisterFunc(CMDMGR_OBJ, SC_SIM_STOP_PLAYBACK_CC,  SC_SIM, SC_SIM_StopPlbkCmd,        0);
-      CMDMGR_RegisterFunc(CMDMGR_OBJ, SC_SIM_MQTT_JSON_CC,      SC_SIM, SC_SIM_ProcessMqttJsonCmd, sizeof(SC_SIM_MqttJsonCmd_CmdPayload_t));
+      CMDMGR_RegisterFunc(CMDMGR_OBJ, SC_SIM_J_MSG_CC,          SC_SIM, SC_SIM_ProcessJMsgCmd, sizeof(SC_SIM_JMsgCmd_CmdPayload_t));
 
       CFE_MSG_Init(CFE_MSG_PTR(ScSimApp.HkTlm.TelemetryHeader), 
                    CFE_SB_ValueToMsgId(INITBL_GetIntConfig(INITBL_OBJ, CFG_SC_SIM_HK_TLM_TOPICID)),

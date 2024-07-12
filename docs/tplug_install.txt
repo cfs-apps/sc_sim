@@ -1,0 +1,92 @@
+These instructions describe how to integrate SC_SIM's Topic Plugins(TPLUGs)
+with JMSG_LIB. SC_SIM's TPLUGs are compiled with JMSG_LIB and not the SC_SIM
+app. Four files are involved with integrating TPLUGs. This list describes
+each file's role and the the next section describes how to edit the files.
+
+1. sc_sim/fsw/usr_tplugs/sc_sim_tplug.c
+
+   Assigns Topic Plugin IDs to SC_SIM's TPLUGS. No changes are required
+   if the defaults can be used. These TPLUG IDs must agree with the IDs
+   used in cpu1_jmsg_topics.json
+   
+   
+2. jmsg_lib/CMakeLists.txt  
+   
+   Needs to be modified to include SC_SIM's TPLUGs when JMSG_LIB is built. 
+   
+   
+3. jmsg_lib/fsw/usr_tplugs/usr_tplug.c
+
+   Needs to call SC_SIM's TPLUG constructor.
+   
+
+4. cfe-eds-framework/basecamp_defs/cpu1_jmsg_topics.json
+
+   Needs to be configured to use SC_SIM's TPLUGs.
+
+Note the topic IDs in cpu1_jmsg_topics.json are populated when 
+'make target topicids' is run. 
+
+===============================================================================
+File Customization Instructions
+===============================================================================
+
+1. sc_sim/fsw/usr_tplugs/sc_sim_tplug.c No changes if use defaults...
+
+   SC_SIM_TPLUG_CMD_Constructor(JMSG_PLATFORM_TopicPlugin_USR_1);
+   SC_SIM_TPLUG_MGMT_Constructor(JMSG_PLATFORM_TopicPlugin_USR_2);
+   SC_SIM_TPLUG_MODEL_Constructor(JMSG_PLATFORM_TopicPlugin_USR_3);
+   
+2. jmsg_lib/CMakeLists.txt Add...
+
+   include_directories(${sc_sim_MISSION_DIR}/fsw/usr_tplugs)
+   aux_source_directory(${sc_sim_MISSION_DIR}/fsw/usr_tplugs APP_SRC_FILES)
+ 
+3. jmsg_lib/fsw/usr_tplugs/usr_tplug.c Add...
+   
+   #include "sc_sim_tplug.h"
+   SC_SIM_TPLUG_Constructor()
+
+   Comment out unused TPLUGS
+   
+4. cfe-eds-framework/basecamp_defs/cpu1_jmsg_topics.json Configure...
+
+   "topic-id-map": { 
+   
+      "start": true,
+      
+      "SC_SIM_CMD_TOPICID": 0,
+      "SC_SIM_MGMT_TLM_TOPICID": 0,
+      "SC_SIM_MODEL_TLM_TOPICID": 0,
+      
+      "end": true
+
+   },
+   
+   "topic": [
+       {
+          "name":  "basecamp/sc_sim/cmd",
+          "cfe-3": 0,
+          "cfe": 0,
+          "protocol": "mqtt",
+          "sb-role": "pub",
+          "enabled": "true"
+       },
+       {
+          "name":  "basecamp/sc_sim/mgmt",
+          "cfe-4": 0,
+          "cfe": 0,
+          "protocol": "mqtt",
+          "sb-role": "sub",
+          "enabled": "true"
+       },
+       {
+          "name":  "basecamp/sc_sim/model",
+          "cfe-5": 0,
+          "cfe": 0,
+          "protocol": "mqtt",
+          "sb-role": "sub",
+          "enabled": "true"
+       },
+
+   ]

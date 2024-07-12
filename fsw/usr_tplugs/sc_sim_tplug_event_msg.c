@@ -12,14 +12,14 @@
 ** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ** GNU Affero General Public License for more details.
 **
+** Purpose:
+**   Manage SC_SIM TPLUG Event Message
+**
 ** Notes:
-**   1. This plugin is defined with SC_SIM because it needs the 
-**      MQTT realtime event message. The MQTT event message contents
-**      are tailored for its needs.
-**   2. The JSON payload format is defined below.
-**   3. "SC_SIM" is included in event messages to identify the app
+**   1. The JSON payload format is defined below.
+**   2. "SC_SIM" is included in event messages to identify the app
 **      supplying the plugin. The event messages are reported by
-**      MQTT_GW.
+**      the JMSG network app.
 **
 */
 
@@ -27,7 +27,9 @@
 ** Includes
 */
 
-#include "sc_sim_mqtt_topic_event_msg.h"
+#include "lib_cfg.h"
+#include "sc_sim_tplug_event_msg.h"
+#include "sc_sim_eds_typedefs.h"
 
 
 /***********************/
@@ -36,22 +38,69 @@
 
 #define EVENT_MSG_LEN sizeof(CFE_EVS_EventMessage_String_t)
 
+/*
+** Event Message IDs
+*/
+
+#define BASE_EID  (JMSG_PLATFORM_TopicPluginBaseEid_USR_2)
+
+#define SC_SIM_TPLUG_EVENT_MSG_INIT_SB_MSG_TEST_EID  (BASE_EID + 0)
+#define SC_SIM_TPLUG_EVENT_MSG_SB_MSG_TEST_EID       (BASE_EID + 1)
+#define SC_SIM_TPLUG_EVENT_MSG_LOAD_JSON_DATA_EID    (BASE_EID + 2)
+#define SC_SIM_TPLUG_EVENT_MSG_JSON_TO_CCSDS_ERR_EID (BASE_EID + 3)
+
+       
+/**********************/
+/** Type Definitions **/
+/**********************/
+
+
+/******************************************************************************
+** Telemetry
+** 
+** CFE_EVS_LongEventTlm_t is defined in CFE_EVS's EDS
+*/
+
+typedef struct
+{
+
+   /*
+   ** CFE_EVS Event Message Telemetry
+   */
+   
+   CFE_SB_MsgId_t          TlmMsgId;  
+   CFE_EVS_LongEventTlm_t  TlmMsg;
+   char                    JMsgPayload[2048];
+
+   /*
+   ** Subset of the standard CJSON table data because this isn't using the
+   ** app_c_fw table manager service, but is using core-json in the same way
+   ** as an app_c_fw managed table.
+   */
+   size_t  JsonObjCnt;
+
+   uint32  CfeToJsonCnt;
+   uint32  JsonToCfeCnt;
+   
+   
+} SC_SIM_TPLUG_EVENT_MSG_Class_t;
+
 
 /************************************/
 /** Local File Function Prototypes **/
 /************************************/
 
-static bool CfeToJson(const char **JsonMsgPayload, const CFE_MSG_Message_t *CfeMsg);
-static bool JsonToCfe(CFE_MSG_Message_t **CfeMsg, const char *JsonMsgPayload, uint16 PayloadLen);
-static bool LoadJsonData(const char *JsonMsgPayload, uint16 PayloadLen);
-static void SbMsgTest(bool Init, int16 Param);
+static bool CfeToJson(const char **JMsgPayload, const CFE_MSG_Message_t *CfeMsg);
+static bool JsonToCfe(CFE_MSG_Message_t **CfeMsg, const char *JMsgPayload, uint16 PayloadLen);
+static bool LoadJsonData(const char *JMsgPayload, uint16 PayloadLen);
+static void PluginTest(bool Init, int16 Param);
 
 
 /**********************/
 /** Global File Data **/
 /**********************/
 
-static SC_SIM_MQTT_TOPIC_EVENT_MSG_Class_t *MqttTopicEventMsg = NULL;
+static SC_SIM_TPLUG_EVENT_MSG_Class_t TPlugEventMsg;
 
 static CFE_TIME_SysTime_t EventMsgTime;
 static CFE_EVS_LongEventTlm_Payload_t EventMsgPayload; /* Working buffer for loads */
@@ -84,35 +133,32 @@ static const char *NullEventMsg = "{\"time\": 0,\"app\": \"null\",\"type\": 0,\"
 
 
 /******************************************************************************
-** Function: SC_SIM_MQTT_TOPIC_EVENT_MSG_Constructor
+** Function: SC_SIM_TPLUG_EVENT_MSG_Constructor
 **
-** Initialize the MQTT KIT_TO Event Message topic
+** Initialize the SC_SIM JMSG Event Playback topic
 **
 ** Notes:
 **   None
 **
 */
-void SC_SIM_MQTT_TOPIC_EVENT_MSG_Constructor(SC_SIM_MQTT_TOPIC_EVENT_MSG_Class_t *MqttTopicEventMsgPtr,
-                                             MQTT_TOPIC_TBL_PluginFuncTbl_t *PluginFuncTbl,
-                                             CFE_SB_MsgId_t TlmMsgMid)
+void SC_SIM_TPLUG_EVENT_MSG_Constructor(JMSG_PLATFORM_TopicPlugin_Enum_t TopicPlugin)
 {
-OS_printf("SC_SIM_MQTT_TOPIC_EVENT_MSG_Constructor()\n");
-   MqttTopicEventMsg = MqttTopicEventMsgPtr;
-   memset(MqttTopicEventMsg, 0, sizeof(SC_SIM_MQTT_TOPIC_EVENT_MSG_Class_t));
    
-   PluginFuncTbl->CfeToJson = CfeToJson;
-   PluginFuncTbl->JsonToCfe = JsonToCfe;  
-   PluginFuncTbl->SbMsgTest = SbMsgTest;
+OS_printf("SC_SIM_TPLUG_EVENT_MSG_Constructor()\n");
+
+   memset(&TPlugEventMsg, 0, sizeof(SC_SIM_TPLUG_EVENT_MSG_Class_t));
+    
+   TPlugEventMsg.JsonObjCnt = (sizeof(JsonTblObjs)/sizeof(CJSON_Obj_t));  
    
-   MqttTopicEventMsg->JsonObjCnt = (sizeof(JsonTblObjs)/sizeof(CJSON_Obj_t));
+   TPlugEventMsg.TlmMsgId = JMSG_TOPIC_TBL_RegisterPlugin(TopicPlugin, CfeToJson, JsonToCfe, PluginTest);
    
-   CFE_MSG_Init(CFE_MSG_PTR(MqttTopicEventMsg->TlmMsg), TlmMsgMid, sizeof(CFE_EVS_LongEventTlm_t));
+   CFE_MSG_Init(CFE_MSG_PTR(TPlugEventMsg.TlmMsg), TPlugEventMsg.TlmMsgId, sizeof(CFE_EVS_LongEventTlm_t));
       
-} /* End SC_SIM_MQTT_TOPIC_EVENT_MSG_Constructor() */
+} /* End SC_SIM_TPLUG_EVENT_MSG_Constructor() */
 
 
 /******************************************************************************
-** Function: SC_SIM_MQTT_TOPIC_EVENT_MSG_ReplaceQuote
+** Function: SC_SIM_TPLUG_EVENT_MSG_ReplaceQuote
 **;
 ** Replace all ocurrences of a character in a string.
 **
@@ -121,7 +167,7 @@ OS_printf("SC_SIM_MQTT_TOPIC_EVENT_MSG_Constructor()\n");
 **      JSON messages.
 **
 */
-char* SC_SIM_MQTT_TOPIC_EVENT_MSG_ReplaceQuotes(char *Str, char Find, char Replace)
+char* SC_SIM_TPLUG_EVENT_MSG_ReplaceQuotes(char *Str, char Find, char Replace)
 {
    
    char *CurrentPos = strchr(Str,Find);
@@ -134,7 +180,7 @@ char* SC_SIM_MQTT_TOPIC_EVENT_MSG_ReplaceQuotes(char *Str, char Find, char Repla
    
    return Str;
     
-} /* End SC_SIM_MQTT_TOPIC_EVENT_MSG_ReplaceQuote() */
+} /* End SC_SIM_TPLUG_EVENT_MSG_ReplaceQuote() */
 
 
 /******************************************************************************
@@ -143,9 +189,9 @@ char* SC_SIM_MQTT_TOPIC_EVENT_MSG_ReplaceQuotes(char *Str, char Find, char Repla
 ** Convert a CFE_EVS Event Message to a JSON topic message 
 **
 ** Notes:
-**   1.  Signature must match MQTT_TOPIC_TBL_CfeToJson_t
+**   1.  Signature must match TPLUG_TBL_CfeToJson_t
 */
-static bool CfeToJson(const char **JsonMsgPayload, const CFE_MSG_Message_t *CfeMsg)
+static bool CfeToJson(const char **JMsgPayload, const CFE_MSG_Message_t *CfeMsg)
 {
 
    bool  RetStatus = false;
@@ -154,21 +200,21 @@ static bool CfeToJson(const char **JsonMsgPayload, const CFE_MSG_Message_t *CfeM
    const CFE_EVS_LongEventTlm_Payload_t *EventPayload = CMDMGR_PAYLOAD_PTR(CfeMsg, CFE_EVS_LongEventTlm_t);
    char EventText[EVENT_MSG_LEN];  
    
-   *JsonMsgPayload = NullEventMsg;
+   *JMsgPayload = NullEventMsg;
    
    // Events with double quotes cause JSON parser to barf so replace with single quotes
    strncpy(EventText, EventPayload->Message, EVENT_MSG_LEN);
-   SC_SIM_MQTT_TOPIC_EVENT_MSG_ReplaceQuotes(EventText,'\"','\'');
+   SC_SIM_TPLUG_EVENT_MSG_ReplaceQuotes(EventText,'\"','\'');
    
-   PayloadLen = sprintf(MqttTopicEventMsg->JsonMsgPayload,
+   PayloadLen = sprintf(TPlugEventMsg.JMsgPayload,
                         "{\"time\": %d,\"app\": \"%s\",\"type\": %d,\"text\": \"%s\"}",
                         EventMsg->TelemetryHeader.Sec.Seconds, 
                         EventPayload->PacketID.AppName, EventPayload->PacketID.EventType, EventText);
 
    if (PayloadLen > 0)
    {
-      *JsonMsgPayload = MqttTopicEventMsg->JsonMsgPayload;
-      MqttTopicEventMsg->CfeToJsonCnt++;
+      *JMsgPayload = TPlugEventMsg.JMsgPayload;
+      TPlugEventMsg.CfeToJsonCnt++;
       RetStatus = true;
    }
    
@@ -183,20 +229,20 @@ static bool CfeToJson(const char **JsonMsgPayload, const CFE_MSG_Message_t *CfeM
 ** Convert a JSON CFE_EVS Event message to a cFE message 
 **
 ** Notes:
-**   1.  Signature must match MQTT_TOPIC_TBL_JsonToCfe_t
+**   1.  Signature must match TPLUG_TBL_JsonToCfe_t
 */
-static bool JsonToCfe(CFE_MSG_Message_t **CfeMsg, const char *JsonMsgPayload, uint16 PayloadLen)
+static bool JsonToCfe(CFE_MSG_Message_t **CfeMsg, const char *JMsgPayload, uint16 PayloadLen)
 {
    
    bool RetStatus = false;
    
    *CfeMsg = NULL;
    
-   if (LoadJsonData(JsonMsgPayload, PayloadLen))
+   if (LoadJsonData(JMsgPayload, PayloadLen))
    {
-      *CfeMsg = (CFE_MSG_Message_t *)&MqttTopicEventMsg->TlmMsg;
+      *CfeMsg = (CFE_MSG_Message_t *)&TPlugEventMsg.TlmMsg;
 
-      ++MqttTopicEventMsg->JsonToCfeCnt;
+      ++TPlugEventMsg.JsonToCfeCnt;
       RetStatus = true;
    }
 
@@ -206,7 +252,7 @@ static bool JsonToCfe(CFE_MSG_Message_t **CfeMsg, const char *JsonMsgPayload, ui
 
 
 /******************************************************************************
-** Function: SbMsgTest
+** Function: PluginTest
 **
 ** Generate and send SB SC_SIM Event Playback topic messages on SB that are
 ** read back by MQTT_GW and cause MQTT messages to be generated from the SB
@@ -218,10 +264,10 @@ static bool JsonToCfe(CFE_MSG_Message_t **CfeMsg, const char *JsonMsgPayload, ui
 **      correctly.
 **
 */
-static void SbMsgTest(bool Init, int16 Param)
+static void PluginTest(bool Init, int16 Param)
 {
 
-   CFE_EVS_LongEventTlm_Payload_t *TlmPayload = &MqttTopicEventMsg->TlmMsg.Payload;
+   CFE_EVS_LongEventTlm_Payload_t *TlmPayload = &TPlugEventMsg.TlmMsg.Payload;
 
    if (Init)
    {
@@ -232,7 +278,7 @@ static void SbMsgTest(bool Init, int16 Param)
       TlmPayload->PacketID.EventType = 1;
       strcpy(TlmPayload->Message,"Test Message");
             
-      CFE_EVS_SendEvent(SC_SIM_MQTT_TOPIC_EVENT_MSG_INIT_SB_MSG_TEST_EID, CFE_EVS_EventType_INFORMATION,
+      CFE_EVS_SendEvent(SC_SIM_TPLUG_EVENT_MSG_INIT_SB_MSG_TEST_EID, CFE_EVS_EventType_INFORMATION,
                         "Event Message telemetry topic test started");
    
    }
@@ -241,10 +287,10 @@ static void SbMsgTest(bool Init, int16 Param)
       TlmPayload->PacketID.EventType++;
    }
    
-   CFE_SB_TimeStampMsg(CFE_MSG_PTR(MqttTopicEventMsg->TlmMsg.TelemetryHeader));
-   CFE_SB_TransmitMsg(CFE_MSG_PTR(MqttTopicEventMsg->TlmMsg.TelemetryHeader), true);
+   CFE_SB_TimeStampMsg(CFE_MSG_PTR(TPlugEventMsg.TlmMsg.TelemetryHeader));
+   CFE_SB_TransmitMsg(CFE_MSG_PTR(TPlugEventMsg.TlmMsg.TelemetryHeader), true);
    
-} /* SbMsgTest() */
+} /* PluginTest() */
 
 
 /******************************************************************************
@@ -253,30 +299,30 @@ static void SbMsgTest(bool Init, int16 Param)
 ** Notes:
 **  1. See file prologue for full/partial table load scenarios
 */
-static bool LoadJsonData(const char *JsonMsgPayload, uint16 PayloadLen)
+static bool LoadJsonData(const char *JMsgPayload, uint16 PayloadLen)
 {
 
    bool      RetStatus = false;
    size_t    ObjLoadCnt;
 
-   memset(&MqttTopicEventMsg->TlmMsg.Payload, 0, sizeof(CFE_EVS_LongEventTlm_Payload_t));
+   memset(&TPlugEventMsg.TlmMsg.Payload, 0, sizeof(CFE_EVS_LongEventTlm_Payload_t));
    
-   ObjLoadCnt = CJSON_LoadObjArray(JsonTblObjs, MqttTopicEventMsg->JsonObjCnt, JsonMsgPayload, PayloadLen);
+   ObjLoadCnt = CJSON_LoadObjArray(JsonTblObjs, TPlugEventMsg.JsonObjCnt, JMsgPayload, PayloadLen);
    
-   CFE_EVS_SendEvent(SC_SIM_MQTT_TOPIC_EVENT_MSG_LOAD_JSON_DATA_EID, CFE_EVS_EventType_DEBUG,
+   CFE_EVS_SendEvent(SC_SIM_TPLUG_EVENT_MSG_LOAD_JSON_DATA_EID, CFE_EVS_EventType_DEBUG,
                      "SC_SIM MQTT Event Message LoadJsonData() processed %d JSON objects", (uint16)ObjLoadCnt);
 
-   if (ObjLoadCnt == MqttTopicEventMsg->JsonObjCnt)
+   if (ObjLoadCnt == TPlugEventMsg.JsonObjCnt)
    {
-      MqttTopicEventMsg->TlmMsg.TelemetryHeader.Sec.Seconds = EventMsgTime.Seconds;  //TODO this gets overwritten
-      memcpy(&MqttTopicEventMsg->TlmMsg.Payload, &EventMsgPayload, sizeof(CFE_EVS_LongEventTlm_Payload_t));      
+      TPlugEventMsg.TlmMsg.TelemetryHeader.Sec.Seconds = EventMsgTime.Seconds;  //TODO this gets overwritten
+      memcpy(&TPlugEventMsg.TlmMsg.Payload, &EventMsgPayload, sizeof(CFE_EVS_LongEventTlm_Payload_t));      
       RetStatus = true;
    }
    else
    {
-      CFE_EVS_SendEvent(SC_SIM_MQTT_TOPIC_EVENT_MSG_JSON_TO_CCSDS_ERR_EID, CFE_EVS_EventType_ERROR, 
+      CFE_EVS_SendEvent(SC_SIM_TPLUG_EVENT_MSG_JSON_TO_CCSDS_ERR_EID, CFE_EVS_EventType_ERROR, 
                         "Error processing SC_SIM Event Message message, payload contained %d of %d data objects",
-                        (unsigned int)ObjLoadCnt, (unsigned int)MqttTopicEventMsg->JsonObjCnt);
+                        (unsigned int)ObjLoadCnt, (unsigned int)TPlugEventMsg.JsonObjCnt);
    }
    
    return RetStatus;
