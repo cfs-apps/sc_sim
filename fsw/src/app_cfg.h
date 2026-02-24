@@ -43,10 +43,12 @@
 ** 1.0 - Initial release
 ** 1.3 - Update to Basecamp v1.12's app_c_fw TBLMGR API
 ** 2.0 - Refactor topic plugins with creation of JMSG_LIB
+** 3.0 - Compatible with Basecamp 4.0 and cFS 7.0
+**
 */
 
-#define  SC_SIM_MAJOR_VER      2
-#define  SC_SIM_MINOR_VER      0
+#define  SC_SIM_MAJOR_VER   3
+#define  SC_SIM_MINOR_VER   0
 
 
 /******************************************************************************
