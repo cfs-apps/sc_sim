@@ -676,7 +676,7 @@ bool SC_SIM_StopSimCmd (void *DataObjPtr, const CFE_MSG_Message_t *MsgPtr)
 /******************************************************************************
 ** Functions: SC_SIM_StartPlbkCmd
 **
-** Stop a recorder playback.
+** Start a recorder playback.
 **
 ** Notes:
 **  1. This function must comply with the CMDMGR_CmdFuncPtr definition
